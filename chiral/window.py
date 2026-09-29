@@ -1,4 +1,4 @@
-"""The Forge window: a plain terminal with four hidden edges.
+"""The Chiral window: a plain terminal with four hidden edges.
 
   Shift+↑  command bar        Shift+←  close a terminal column (the focused one, else the last)
   Shift+↓  window bar         Shift+→  new terminal column on the right (focused one: bigger font)
@@ -11,7 +11,7 @@
   Ctrl+← / Ctrl+→ move focus: file tree, main terminal, sub-terminals 1..n, Claude (open ones only)
 
 "smart" Shift+arrows: when a program such as nano is running in the focused terminal, Shift+arrows go
-to that program; Ctrl+Shift+arrows always reach Forge.
+to that program; Ctrl+Shift+arrows always reach Chiral.
 """
 import itertools
 import os
@@ -55,7 +55,7 @@ BORDER = 2   # px; dim when unfocused, accent color on the focused terminal
 def framed(child):
     """Wrap a terminal in a border that lights up while it has focus."""
     frame = Gtk.EventBox()
-    frame.get_style_context().add_class('forge-frame')
+    frame.get_style_context().add_class('chiral-frame')
     for side in ('start', 'end', 'top', 'bottom'):   # margins sit inside the frame, which paints them
         getattr(child, 'set_margin_' + side)(BORDER)
     frame.add(child)
@@ -91,7 +91,7 @@ def is_binary(path):
 
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app, cwd, window_id=1):
-        super().__init__(application=app, title='Forge')
+        super().__init__(application=app, title='Chiral Terminal')
         self.window_id = window_id
         self.app = app
         self.cfg = app.cfg
@@ -131,7 +131,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.columns = []
 
         self.main_term = self.make_terminal()
-        self.main_term.forge_is_app = False
+        self.main_term.chiral_is_app = False
         self.main_term.connect('child-exited', lambda *_: self.close())
         self.main_frame = framed(self.main_term)
         self.tiles.pack_start(self.main_frame, True, True, 0)
@@ -203,16 +203,16 @@ class MainWindow(Gtk.ApplicationWindow):
         t.set_scrollback_lines(10000)
         t.set_mouse_autohide(True)
         t.set_audible_bell(False)
-        t.forge_pid = None
-        t.forge_sub = None
-        t.forge_is_app = False
-        t.forge_keys_first = False    # True: Forge's keys win even while a program runs (agents, previews)
-        t.forge_column = None
-        t.forge_font = None
-        t.forge_zoom = 0             # main / Claude: points added to the configured size
-        t.forge_scroll = 0.0
+        t.chiral_pid = None
+        t.chiral_sub = None
+        t.chiral_is_app = False
+        t.chiral_keys_first = False    # True: Chiral's keys win even while a program runs (agents, previews)
+        t.chiral_column = None
+        t.chiral_font = None
+        t.chiral_zoom = 0             # main / Claude: points added to the configured size
+        t.chiral_scroll = 0.0
         t.connect('scroll-event', self._on_scroll)
-        t.forge_field = StrandField(next(_seeds))
+        t.chiral_field = StrandField(next(_seeds))
         t.set_clear_background(False)      # we paint the background (and the strands) ourselves
         t.connect('draw', self._draw_background)
         self._style_terminal(t)
@@ -225,7 +225,7 @@ class MainWindow(Gtk.ApplicationWindow):
         cr.set_source_rgb(bg.red, bg.green, bg.blue)
         cr.paint()
         if self.cfg.get('background', 'strands') == 'strands':
-            t.forge_field.draw(cr, t.get_allocated_width(), t.get_allocated_height(),
+            t.chiral_field.draw(cr, t.get_allocated_width(), t.get_allocated_height(),
                                time.monotonic() - self._bg_t0, (fg.red, fg.green, fg.blue))
         return False
 
@@ -258,16 +258,16 @@ class MainWindow(Gtk.ApplicationWindow):
             if not t.get_mapped():
                 continue
             folder = self.cwd_of(t)
-            if folder == getattr(t, 'forge_strand_folder', None) and now - getattr(t, 'forge_strand_time', -99) < 8:
+            if folder == getattr(t, 'chiral_strand_folder', None) and now - getattr(t, 'chiral_strand_time', -99) < 8:
                 continue
-            t.forge_strand_folder, t.forge_strand_time = folder, now
-            before = t.forge_field.counts
-            t.forge_field.set_counts(*self._count_entries(folder), now)
-            if t.forge_field.counts != before:
+            t.chiral_strand_folder, t.chiral_strand_time = folder, now
+            before = t.chiral_field.counts
+            t.chiral_field.set_counts(*self._count_entries(folder), now)
+            if t.chiral_field.counts != before:
                 t.queue_draw()
 
     def _bg_tick(self):
-        """Move the strands: redraw visible terminals. Slow when Forge is not the active window."""
+        """Move the strands: redraw visible terminals. Slow when Chiral is not the active window."""
         self._bg_frames += 1
         if self._bg_frames % 25 == 1 and self.cfg.get('background', 'strands') == 'strands':
             self._update_strand_counts()             # about every 2 seconds
@@ -287,7 +287,7 @@ class MainWindow(Gtk.ApplicationWindow):
         t.set_color_cursor(_rgba(self.accent))
         t.set_color_cursor_foreground(_rgba(th['bg']))
         t.set_cell_height_scale(float(self.cfg['font'].get('line_height', 1.0)))
-        if t.forge_sub is None:
+        if t.chiral_sub is None:
             f = self.cfg['font']
             t.set_font(fonts.desc(f.get('family', 'Monospace'), self._zoomed(f.get('size', 12), t)))
 
@@ -297,9 +297,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         def spawned(t, pid, error, *_):
             if error:
-                t.feed(('\r\nforge: could not start %s: %s\r\n' % (argv[0], error.message)).encode())
+                t.feed(('\r\nchiral: could not start %s: %s\r\n' % (argv[0], error.message)).encode())
                 return
-            t.forge_pid = pid
+            t.chiral_pid = pid
             if done:
                 done(pid)
         term.spawn_async(Vte.PtyFlags.DEFAULT, cwd if os.path.isdir(cwd or '') else os.path.expanduser('~'),
@@ -311,48 +311,48 @@ class MainWindow(Gtk.ApplicationWindow):
         th, acc = self.theme, self.accent
         family = self.cfg['font'].get('family', 'Monospace')
         css = '''
-        .forge-panel {{ background-color: {pane}; color: {fg}; }}
-        .forge-panel treeview, .forge-panel list, .forge-panel row {{ background-color: {pane}; color: {fg}; font-family: "{family}"; }}
-        .forge-panel treeview:selected, .forge-panel row:selected {{ background-color: {hdr}; color: {acc}; }}
-        .forge-panel label {{ font-family: "{family}"; }}
-        .forge-panel entry {{ background-color: {bg}; color: {fg}; font-family: "{family}"; border: 1px solid {acc};
+        .chiral-panel {{ background-color: {pane}; color: {fg}; }}
+        .chiral-panel treeview, .chiral-panel list, .chiral-panel row {{ background-color: {pane}; color: {fg}; font-family: "{family}"; }}
+        .chiral-panel treeview:selected, .chiral-panel row:selected {{ background-color: {hdr}; color: {acc}; }}
+        .chiral-panel label {{ font-family: "{family}"; }}
+        .chiral-panel entry {{ background-color: {bg}; color: {fg}; font-family: "{family}"; border: 1px solid {acc};
                               border-radius: 0; box-shadow: none; padding: 5px 8px; caret-color: {acc}; }}
-        .forge-cmd {{ border: 1px solid {line}; border-top: none; }}
+        .chiral-cmd {{ border: 1px solid {line}; border-top: none; }}
         separator {{ background-color: {line}; min-width: 1px; min-height: 1px; }}
-        .forge-sub, .forge-frame {{ background-color: {dim}; }}
-        .forge-sub.focused, .forge-frame.focused {{ background-color: {acc}; }}
-        .forge-sub {{ border-radius: 0; }}
-        .forge-sub.agent {{ border-radius: 9px; }}
-        .forge-title {{ background-color: {hdr}; color: {fg}; font-family: "{family}"; font-size: 9pt; }}
-        .forge-title label {{ padding-left: 6px; }}
-        .forge-sub.focused .forge-title {{ background-color: {acc}; color: #0c0d0f; }}
-        .forge-title button {{ padding: 0 6px; min-height: 0; min-width: 0; border: none; background: none;
+        .chiral-sub, .chiral-frame {{ background-color: {dim}; }}
+        .chiral-sub.focused, .chiral-frame.focused {{ background-color: {acc}; }}
+        .chiral-sub {{ border-radius: 0; }}
+        .chiral-sub.agent {{ border-radius: 9px; }}
+        .chiral-title {{ background-color: {hdr}; color: {fg}; font-family: "{family}"; font-size: 9pt; }}
+        .chiral-title label {{ padding-left: 6px; }}
+        .chiral-sub.focused .chiral-title {{ background-color: {acc}; color: #0c0d0f; }}
+        .chiral-title button {{ padding: 0 6px; min-height: 0; min-width: 0; border: none; background: none;
                                box-shadow: none; color: inherit; font-family: "{family}"; }}
-        .forge-meta {{ opacity: 0.75; }}
-        .forge-grip {{ background-image: linear-gradient(135deg, transparent 55%, {line} 55%); }}
-        .forge-sub.focused .forge-grip {{ background-image: linear-gradient(135deg, transparent 55%, {acc} 55%); }}
-        .forge-bar button {{ padding: 1px 8px; min-height: 0; border: none; border-radius: 0; box-shadow: none;
+        .chiral-meta {{ opacity: 0.75; }}
+        .chiral-grip {{ background-image: linear-gradient(135deg, transparent 55%, {line} 55%); }}
+        .chiral-sub.focused .chiral-grip {{ background-image: linear-gradient(135deg, transparent 55%, {acc} 55%); }}
+        .chiral-bar button {{ padding: 1px 8px; min-height: 0; border: none; border-radius: 0; box-shadow: none;
                              background: {hdr}; color: {fg}; font-family: "{family}"; }}
-        .forge-bar button.focused {{ background: {acc}; color: #0c0d0f; }}
-        .forge-bar button.hidden-win {{ color: {dim}; }}
-        .forge-dim {{ color: {dim}; }}
-        .forge-card {{ padding: 6px; border-radius: 10px; }}
-        .forge-share {{ padding: 0 6px; border-radius: 4px; font-weight: bold; }}
-        .forge-share.on {{ background-color: {acc}; color: #101010; }}
-        .forge-sub.remote {{ background-color: {palette5}; }}
-        .forge-sub.remote.focused {{ background-color: {acc}; }}
-        .forge-settings stacksidebar row:selected {{ background-color: {acc}; color: #101010; }}
-        .forge-settings switch:checked {{ background-color: {acc}; border-color: {acc}; }}
-        .forge-card:hover {{ background-color: alpha({acc}, 0.12); }}
-        .forge-card.selected {{ background-color: alpha({acc}, 0.35); }}
-        .forge-aware {{ background-color: {pane}; color: {fg}; }}
-        .forge-aware label {{ font-family: "{family}"; font-size: 9pt; }}
-        .forge-aware-item {{ padding: 0 4px; min-height: 0; min-width: 0; border: none; box-shadow: none;
+        .chiral-bar button.focused {{ background: {acc}; color: #0c0d0f; }}
+        .chiral-bar button.hidden-win {{ color: {dim}; }}
+        .chiral-dim {{ color: {dim}; }}
+        .chiral-card {{ padding: 6px; border-radius: 10px; }}
+        .chiral-share {{ padding: 0 6px; border-radius: 4px; font-weight: bold; }}
+        .chiral-share.on {{ background-color: {acc}; color: #101010; }}
+        .chiral-sub.remote {{ background-color: {palette5}; }}
+        .chiral-sub.remote.focused {{ background-color: {acc}; }}
+        .chiral-settings stacksidebar row:selected {{ background-color: {acc}; color: #101010; }}
+        .chiral-settings switch:checked {{ background-color: {acc}; border-color: {acc}; }}
+        .chiral-card:hover {{ background-color: alpha({acc}, 0.12); }}
+        .chiral-card.selected {{ background-color: alpha({acc}, 0.35); }}
+        .chiral-aware {{ background-color: {pane}; color: {fg}; }}
+        .chiral-aware label {{ font-family: "{family}"; font-size: 9pt; }}
+        .chiral-aware-item {{ padding: 0 4px; min-height: 0; min-width: 0; border: none; box-shadow: none;
                              background: none; color: {fg}; }}
-        .forge-aware-item:hover {{ background: {hdr}; }}
-        .forge-aware-tag {{ color: {palette6}; }}
-        .forge-accent {{ color: {acc}; }}
-        .forge-toast {{ background-color: {hdr}; color: {fg}; border: 1px solid {line}; font-family: "{family}"; }}
+        .chiral-aware-item:hover {{ background: {hdr}; }}
+        .chiral-aware-tag {{ color: {palette6}; }}
+        .chiral-accent {{ color: {acc}; }}
+        .chiral-toast {{ background-color: {hdr}; color: {fg}; border: 1px solid {line}; font-family: "{family}"; }}
         vte-terminal {{ padding: 2px 4px; }}
         '''.format(family=family, acc=acc, palette6=th['palette'][6], palette5=th['palette'][5], **th)
         self.css.load_from_data(css.encode())
@@ -367,7 +367,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self._style_terminal(t)
         self.main_font_size = None
         for t in self.tile_terms():
-            t.forge_font = None
+            t.chiral_font = None
         self._schedule_main_fit()
         for s in self.subs:
             s.font_size = None
@@ -432,28 +432,28 @@ class MainWindow(Gtk.ApplicationWindow):
 
     @staticmethod
     def _zoomed(size, term):
-        return max(6, min(40, size + term.forge_zoom))
+        return max(6, min(40, size + term.chiral_zoom))
 
     def zoom_terminal(self, t, step):
         """step +1 / -1 bigger / smaller, 0 back to automatic size."""
-        if t.forge_sub:
-            t.forge_sub.zoom(step)
-            size, name = t.forge_sub.font_size, 'window %d' % self.sub_number(t.forge_sub)
+        if t.chiral_sub:
+            t.chiral_sub.zoom(step)
+            size, name = t.chiral_sub.font_size, 'window %d' % self.sub_number(t.chiral_sub)
         else:
             base = self.cfg['font'].get('size', 12)
-            t.forge_zoom = 0 if step == 0 else max(6 - base, min(40 - base, t.forge_zoom + step))
-            t.forge_font = None
+            t.chiral_zoom = 0 if step == 0 else max(6 - base, min(40 - base, t.chiral_zoom + step))
+            t.chiral_font = None
             self.main_font_size = None
             self._fit_main()
-            size = t.forge_font if t.forge_column else self.main_font_size
-            name = 'column %d' % t.forge_column.number() if t.forge_column else 'main terminal'
+            size = t.chiral_font if t.chiral_column else self.main_font_size
+            name = 'column %d' % t.chiral_column.number() if t.chiral_column else 'main terminal'
         self.toast_widget.show_text('%s: %spt%s' % (name, size, '' if step == 0 else ' · Ctrl+0 resets'), seconds=1.2)
         self._keep_panels_on_top()
 
     def _on_scroll(self, t, ev):
         _ok, state = _unpack(ev.get_state())
-        if state & Gdk.ModifierType.SHIFT_MASK and not state & Gdk.ModifierType.CONTROL_MASK and t.forge_sub:
-            return self._resize_scroll(t.forge_sub, ev)   # Shift + wheel: resize a floating window
+        if state & Gdk.ModifierType.SHIFT_MASK and not state & Gdk.ModifierType.CONTROL_MASK and t.chiral_sub:
+            return self._resize_scroll(t.chiral_sub, ev)   # Shift + wheel: resize a floating window
         if not state & Gdk.ModifierType.CONTROL_MASK:
             return False                      # plain wheel: scrollback as usual
         has_dir, direction = _unpack(ev.get_scroll_direction())
@@ -466,10 +466,10 @@ class MainWindow(Gtk.ApplicationWindow):
             if not deltas[0]:
                 return True
             dy = deltas[-1]
-            t.forge_scroll -= dy              # touchpads send many small steps: add them up
-            while abs(t.forge_scroll) >= 1:
-                step = 1 if t.forge_scroll > 0 else -1
-                t.forge_scroll -= step
+            t.chiral_scroll -= dy              # touchpads send many small steps: add them up
+            while abs(t.chiral_scroll) >= 1:
+                step = 1 if t.chiral_scroll > 0 else -1
+                t.chiral_scroll -= step
                 self.zoom_terminal(t, step)
         return True
 
@@ -481,11 +481,11 @@ class MainWindow(Gtk.ApplicationWindow):
             deltas = ev.get_scroll_deltas()
             if not deltas[0]:
                 return True
-            sub.forge_resize_acc = getattr(sub, 'forge_resize_acc', 0.0) - deltas[-1]
+            sub.chiral_resize_acc = getattr(sub, 'chiral_resize_acc', 0.0) - deltas[-1]
             steps = []
-            while abs(sub.forge_resize_acc) >= 1:
-                step = 1 if sub.forge_resize_acc > 0 else -1
-                sub.forge_resize_acc -= step
+            while abs(sub.chiral_resize_acc) >= 1:
+                step = 1 if sub.chiral_resize_acc > 0 else -1
+                sub.chiral_resize_acc -= step
                 steps.append(step)
         for step in steps:
             factor = 1.08 if step > 0 else 1 / 1.08
@@ -531,8 +531,8 @@ class MainWindow(Gtk.ApplicationWindow):
         for t in self.tile_terms():
             base = self._zoomed(f.get('size', 12), t)
             size = base if t is active else max(min(low, base), base - drop)
-            if size != t.forge_font:
-                t.forge_font = size
+            if size != t.chiral_font:
+                t.chiral_font = size
                 t.set_font(fonts.desc(family, size))
             if t is self.main_term:
                 self.main_font_size = size
@@ -545,7 +545,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tiles.pack_start(col.frame, True, True, 0)
         col.frame.show_all()
         col.start()
-        self.main_term.forge_font = None
+        self.main_term.chiral_font = None
         col.term.grab_focus()
         self._schedule_main_fit()
         self.aware.update_right()
@@ -554,7 +554,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def remove_column(self):
         """Shift+←: close the focused column, or the rightmost one when focus is elsewhere."""
         term = self.get_focus()
-        col = getattr(term, 'forge_column', None) if isinstance(term, Vte.Terminal) else None
+        col = getattr(term, 'chiral_column', None) if isinstance(term, Vte.Terminal) else None
         if col is None and self.columns:
             col = self.columns[-1]
         if col is None:
@@ -574,7 +574,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.active_tile = None
         if had_focus or self.last_term is col.term:
             (self.columns[i - 1].term if i > 0 else self.main_term).grab_focus()
-        self.main_term.forge_font = None
+        self.main_term.chiral_font = None
         self._schedule_main_fit()
         self.aware.update_right()
 
@@ -593,15 +593,15 @@ class MainWindow(Gtk.ApplicationWindow):
         for c in self.columns:
             set_lit(c.frame, widget is c.term)
         if isinstance(widget, Vte.Terminal):
-            if widget.forge_sub is None or widget.forge_sub is not self.preview:
+            if widget.chiral_sub is None or widget.chiral_sub is not self.preview:
                 self.last_term = widget             # a preview is a quick look, not a place to return to
             if widget in self.tile_terms() and widget is not self.active_tile:
                 self.active_tile = widget           # the focused column gets the bigger font
                 if self.columns:
                     self._fit_tiles()
-            self._mark_focused(widget.forge_sub)
-            if widget.forge_sub:
-                self.agents.touch(widget.forge_sub)
+            self._mark_focused(widget.chiral_sub)
+            if widget.chiral_sub:
+                self.agents.touch(widget.chiral_sub)
             self.aware.follow(self.cwd_of(widget))
         else:
             self._mark_focused(None)        # file tree or command bar: no terminal border is lit
@@ -617,7 +617,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _focus_back(self):
         t = self.last_term if self.last_term in self.all_terminals() else self.main_term
-        if t.forge_sub and not t.forge_sub.get_visible():
+        if t.chiral_sub and not t.chiral_sub.get_visible():
             t = self.main_term
         t.grab_focus()
 
@@ -627,13 +627,13 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def term_busy(self, t):
         """True when a program (not the shell prompt) owns the terminal: nano, vim, ..."""
-        if t.forge_is_app:
+        if t.chiral_is_app:
             return True
         pty = t.get_pty()
-        if not pty or not t.forge_pid:
+        if not pty or not t.chiral_pid:
             return False
         try:
-            return os.tcgetpgrp(pty.get_fd()) != t.forge_pid
+            return os.tcgetpgrp(pty.get_fd()) != t.chiral_pid
         except OSError:
             return False
 
@@ -645,7 +645,7 @@ class MainWindow(Gtk.ApplicationWindow):
         term = focus if isinstance(focus, Vte.Terminal) else None
 
         # inside the tree's preview window: Esc goes back to the tree
-        if term is not None and term.forge_sub is not None and term.forge_sub is self.preview:
+        if term is not None and term.chiral_sub is not None and term.chiral_sub is self.preview:
             if key == Gdk.KEY_Escape and mods == 0:
                 if self.panel_open('tree'):
                     self.tree.view.grab_focus()
@@ -659,7 +659,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 if isinstance(focus, Gtk.Entry) and key in (Gdk.KEY_Left, Gdk.KEY_Right):
                     return False                      # text selection in the command bar
                 if (term and self.cfg['keys'].get('shift_arrows', 'smart') == 'smart'
-                        and not term.forge_keys_first and self.term_busy(term)):
+                        and not term.chiral_keys_first and self.term_busy(term)):
                     return False                      # nano & co. keep Shift+arrows
             if EDGE_KEYS[key] == 'column':
                 self.add_column()                 # every Shift+→ adds another column on the right
@@ -680,8 +680,8 @@ class MainWindow(Gtk.ApplicationWindow):
             if name == 'w' and self.focused_sub and term is self.focused_sub.term:
                 self.close_sub(self.focused_sub)
                 return True
-            if name == 'w' and term is not None and term.forge_column:
-                self.close_column(term.forge_column)
+            if name == 'w' and term is not None and term.chiral_column:
+                self.close_column(term.chiral_column)
                 return True
             if name == 'e':
                 self.explain_last()
@@ -692,7 +692,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         if mods == CTRL and key == Gdk.KEY_o:
             smart = self.cfg['keys'].get('shift_arrows', 'smart') == 'smart'
-            if term and smart and not term.forge_keys_first and self.term_busy(term):
+            if term and smart and not term.chiral_keys_first and self.term_busy(term):
                 return False                  # nano's Ctrl+O (save) and friends keep working
             self.toggle_panel('tree')
             return True
@@ -707,7 +707,7 @@ class MainWindow(Gtk.ApplicationWindow):
             mode = self.cfg['keys'].get('ctrl_arrows', 'smart')
             in_tree = self.tree.view.has_focus()
             if mode != 'off' and not isinstance(focus, Gtk.Entry) and (term or in_tree):
-                if not (mode == 'smart' and term and not term.forge_keys_first and self.term_busy(term)):
+                if not (mode == 'smart' and term and not term.chiral_keys_first and self.term_busy(term)):
                     self.cycle_focus(1 if key == Gdk.KEY_Right else -1)
                     return True
 
@@ -799,7 +799,7 @@ class MainWindow(Gtk.ApplicationWindow):
             sub.get_style_context().add_class('agent')
             sub.set_border(3)               # thick enough that the square content fits inside the rounded corners
             sub.set_rounded(9)
-        sub.term.forge_keys_first = agent  # Forge's keys still work inside an agent
+        sub.term.chiral_keys_first = agent  # Chiral's keys still work inside an agent
         self.next_sid += 1
         self.subs.append(sub)
         sub.on_exit = on_exit
@@ -886,14 +886,14 @@ class MainWindow(Gtk.ApplicationWindow):
         folder = path if is_dir else os.path.dirname(path)
         env = None
         if is_dir:
-            argv, env = None, {'FORGE_STARTUP': 'ls -la --color=auto'}
+            argv, env = None, {'CHIRAL_STARTUP': 'ls -la --color=auto'}
         elif is_binary(path):
-            argv = [sys.executable, '-m', 'forge.hexview', path]
+            argv = [sys.executable, '-m', 'chiral.hexview', path]
         else:
             argv = ['less', '-R', '-M', path]
         sub = self.new_sub('preview · %s%s · esc: back' % (name, '/' if is_dir else ''), argv=argv, cwd=folder,
                            app_mode=not is_dir, extra_env=env, focus=False, geom=geom)
-        sub.term.forge_keys_first = True    # a quick look: Ctrl+O, Shift/Ctrl+arrows always reach Forge
+        sub.term.chiral_keys_first = True    # a quick look: Ctrl+O, Shift/Ctrl+arrows always reach Chiral
         sub.preview_path = path
         self.preview = sub
         if old:
@@ -910,7 +910,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.toast('no preview to keep')
             return
         self.preview = None
-        sub.term.forge_keys_first = False   # a normal window now: programs keep their keys again
+        sub.term.chiral_keys_first = False   # a normal window now: programs keep their keys again
         sub.title = sub.title.replace('preview · ', '', 1).replace(' · esc: back', '')
         sub.update_title()
         self.toast('kept: ' + sub.title)
@@ -972,10 +972,10 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---------- opening things ----------
     def editor_argv(self):
-        editor = self.cfg.get('editor') or os.environ.get('FORGE_REAL_EDITOR') or ''
+        editor = self.cfg.get('editor') or os.environ.get('CHIRAL_REAL_EDITOR') or ''
         if not editor:
             env_editor = os.environ.get('EDITOR', '')
-            editor = env_editor if env_editor and 'forge-edit' not in env_editor else 'nano'
+            editor = env_editor if env_editor and 'chiral-edit' not in env_editor else 'nano'
         return shlex.split(editor)
 
     def open_file(self, path, hex_view=None):
@@ -985,7 +985,7 @@ class MainWindow(Gtk.ApplicationWindow):
             return
         name = os.path.basename(path)
         if hex_view or (hex_view is None and os.path.exists(path) and is_binary(path)):
-            self.new_sub('hex ' + name, argv=[sys.executable, '-m', 'forge.hexview', path],
+            self.new_sub('hex ' + name, argv=[sys.executable, '-m', 'chiral.hexview', path],
                          cwd=os.path.dirname(path), app_mode=True)
         else:
             argv = self.editor_argv() + [path]
@@ -1039,7 +1039,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _run_setup(self, title, command, then=None):
         """Run a setup command in a floating terminal through an interactive bash (nvm etc. loaded)."""
-        script = ('%s; st=$?; echo; if [ $st -eq 0 ]; then echo "[forge] done."; else echo "[forge] failed (exit $st)."; fi; '
+        script = ('%s; st=$?; echo; if [ $st -eq 0 ]; then echo "[chiral] done."; else echo "[chiral] failed (exit $st)."; fi; '
                   'printf "Press Enter to close."; read _' % command)
         argv = ['/bin/bash', '--rcfile', self.runtime.rc, '-i', '-c', script]
         sub = self.new_sub(title, argv=argv, cwd=os.path.expanduser('~'), app_mode=True,
@@ -1063,7 +1063,7 @@ class MainWindow(Gtk.ApplicationWindow):
             return
         if phase == 'missing':
             if self._ask('%s is not installed. Install it now?' % ('Ollama (Local AI)' if kind == 'local' else spec['label']),
-                         'Forge will run this in a floating terminal, where you can watch it'
+                         'Chiral will run this in a floating terminal, where you can watch it'
                          '%s:\n\n<tt>%s</tt>' % (' and type your password' if kind == 'local' else '',
                                                    GLib.markup_escape_text(spec['install'])), ok='Install'):
                 self._run_setup('install %s' % spec['label'].lower(), spec['install'], then=refresh)
@@ -1071,7 +1071,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # installed but not ready
         if kind != 'local':
             if self._ask('Sign in to %s?' % spec['label'],
-                         '%s\nForge runs <tt>%s</tt> in a floating terminal. Once you are signed in, %s is ready '
+                         '%s\nChiral runs <tt>%s</tt> in a floating terminal. Once you are signed in, %s is ready '
                          'to use as an AI agent.' % (spec['login_note'], spec['login'], spec['label']), ok='Sign in'):
                 self._run_setup('sign in: %s' % spec['label'].lower(), spec['login'], then=refresh)
             return
@@ -1081,7 +1081,7 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import agent_status as ast
         tool = (self.aware.agent_chips.tools or {}).get('ollama') or 'ollama'
         if not state.get('server'):
-            if not self._ask('Start the Local AI server?', 'Forge starts <tt>ollama serve</tt> in the background. '
+            if not self._ask('Start the Local AI server?', 'Chiral starts <tt>ollama serve</tt> in the background. '
                              'It keeps running until you log out.', ok='Start'):
                 return
             try:
@@ -1163,7 +1163,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def live_cwd(term):
         """The folder the terminal's shell is in right now, straight from the system."""
         try:
-            return os.readlink('/proc/%d/cwd' % term.forge_pid) if term.forge_pid else None
+            return os.readlink('/proc/%d/cwd' % term.chiral_pid) if term.chiral_pid else None
         except OSError:
             return None
 
@@ -1171,7 +1171,7 @@ class MainWindow(Gtk.ApplicationWindow):
         live = self.live_cwd(term)
         if live and os.path.isdir(live):
             return live
-        return term.forge_sub.cwd if term.forge_sub else self.cwd
+        return term.chiral_sub.cwd if term.chiral_sub else self.cwd
 
     def _poll_events(self):
         events = self.runtime.read_events()
@@ -1258,8 +1258,8 @@ class MainWindow(Gtk.ApplicationWindow):
         if target == 'tree':
             self.hover_open.discard('tree')          # keyboard focus keeps it open
             self.tree.focus()
-        elif target.forge_sub:
-            self.focus_sub(target.forge_sub)
+        elif target.chiral_sub:
+            self.focus_sub(target.chiral_sub)
         else:
             target.grab_focus()
         if len(ring) > 1:

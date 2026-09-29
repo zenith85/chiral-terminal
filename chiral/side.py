@@ -18,7 +18,7 @@ class Column:
         self.sid = sid
         self.folder = os.path.abspath(folder or os.path.expanduser('~'))
         self.term = win.make_terminal()
-        self.term.forge_column = self
+        self.term.chiral_column = self
         self.frame = framed(self.term)
         self.term.connect('child-exited', lambda *_: win.close_column(self))
 

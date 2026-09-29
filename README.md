@@ -1,4 +1,4 @@
-# Forge
+# Chiral Terminal
 
 A plain terminal with four hidden edges. By default it's just your shell, full screen.
 
@@ -19,11 +19,11 @@ A plain terminal with four hidden edges. By default it's just your shell, full s
   gives the prompt straight back. `$EDITOR` waits for its window, so `git commit` works. Use
   `command nano file` to run it in place. In a sub-terminal, programs run where you type them.
 - **Smart Shift+arrows:** while nano/vim/etc. run in the focused terminal, Shift+arrows go to them (text
-  selection). **Ctrl+Shift+arrows** always reach Forge.
+  selection). **Ctrl+Shift+arrows** always reach Chiral.
 - Binary files open in the hex viewer (`g` go to offset, `/` find bytes or `"text"`, `n` next, `q` quit).
 - **AI agents:** Shift+↑ → `AI agent` (or `AI agent: claude` / `AI agent: codex`) opens the agent, already
   running, in a floating window in the folder you are in (`default_agent` under `[claude]` picks which).
-  Agents start through bash, so tools installed with nvm are found. It watches your terminals: Forge logs each finished command (and the output of failed ones) to a context
+  Agents start through bash, so tools installed with nvm are found. It watches your terminals: Chiral logs each finished command (and the output of failed ones) to a context
   file the agent reads. With `claude.watch = "auto"` a failed command is explained automatically by the
   agent you used last (never while you type in it). `#question` in the command bar or **Ctrl+Shift+E**
   go to that agent. Open as many agents as you like.
@@ -44,23 +44,23 @@ In **Settings → Team**, add the people who may join you (name + IP address) an
 ## Command line
 
 ```
-forge .                  open here (reuses the running window)
-forge notes.txt          open a file in a sub-terminal ($EDITOR, binaries in hex)
-forge -f "make watch"    run a command in a new sub-terminal
-forge -x fw.bin          hex viewer
-forge open [PATH]        show in Nautilus
-forge settings           edit settings
+chiral .                  open here (reuses the running window)
+chiral notes.txt          open a file in a sub-terminal ($EDITOR, binaries in hex)
+chiral -f "make watch"    run a command in a new sub-terminal
+chiral -x fw.bin          hex viewer
+chiral open [PATH]        show in Nautilus
+chiral settings           edit settings
 ```
 
 ## Settings
 
-Shift+↑ → `settings` (or `settings: appearance`, `settings: font`, …, or `forge settings`) opens the settings window: theme cards with
+Shift+↑ → `settings` (or `settings: appearance`, `settings: font`, …, or `chiral settings`) opens the settings window: theme cards with
 live previews, accent colours, strands and animations, fonts and auto-sizing, tree and top-bar options,
-AI agents and key behaviour. Every change applies at once and is saved to `~/.config/forge/forge.toml`
+AI agents and key behaviour. Every change applies at once and is saved to `~/.config/chiral/chiral.toml`
 (still editable by hand: "Open settings file").
 
-Themes: Forge Dark, Nord, Catppuccin Mocha, Tokyo Night, Everforest, Rosé Pine, Kanagawa, Gruvbox Dark,
-Solarized Dark, High Contrast, and light: Forge Light, Catppuccin Latte, Gruvbox Light, Solarized Light.
+Themes: Chiral Dark, Nord, Catppuccin Mocha, Tokyo Night, Everforest, Rosé Pine, Kanagawa, Gruvbox Dark,
+Solarized Dark, High Contrast, and light: Chiral Light, Catppuccin Latte, Gruvbox Light, Solarized Light.
 Each brings its own accent (accent "theme"), or pick one.
 
 ## Install

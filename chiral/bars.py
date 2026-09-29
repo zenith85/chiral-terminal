@@ -15,12 +15,12 @@ class WindowBar(Gtk.EventBox):
     def __init__(self, win):
         super().__init__()
         self.win = win
-        self.get_style_context().add_class('forge-panel')
+        self.get_style_context().add_class('chiral-panel')
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(outer)
         outer.pack_start(Gtk.Separator(), False, False, 0)
         self.row = Gtk.Box(spacing=2)
-        self.row.get_style_context().add_class('forge-bar')
+        self.row.get_style_context().add_class('chiral-bar')
         self.row.set_margin_start(6)
         self.row.set_margin_end(6)
         self.row.set_margin_top(3)
@@ -31,12 +31,12 @@ class WindowBar(Gtk.EventBox):
         for child in self.row.get_children():
             self.row.remove(child)
         title = Gtk.Label(label='windows ')
-        title.get_style_context().add_class('forge-dim')
+        title.get_style_context().add_class('chiral-dim')
         self.row.pack_start(title, False, False, 0)
         subs = self.win.subs
         if not subs:
             empty = Gtk.Label(label='none yet · Ctrl+Shift+T opens one')
-            empty.get_style_context().add_class('forge-dim')
+            empty.get_style_context().add_class('chiral-dim')
             self.row.pack_start(empty, False, False, 0)
         for i, sub in enumerate(subs):
             text = ' %d %s%s ' % (i + 1, sub.title, '' if sub.get_visible() else ' (hidden)')
@@ -58,7 +58,7 @@ class WindowBar(Gtk.EventBox):
             b.connect('clicked', lambda _b, f=cb: f())
             self.row.pack_start(b, False, False, 0)
         hint = Gtk.Label(label='  1-9 jump · shift+↓ hide')
-        hint.get_style_context().add_class('forge-dim')
+        hint.get_style_context().add_class('chiral-dim')
         self.row.pack_start(hint, False, False, 0)
         self.row.show_all()
 
@@ -69,14 +69,14 @@ class CommandBar(Gtk.EventBox):
     def __init__(self, win):
         super().__init__()
         self.win = win
-        self.get_style_context().add_class('forge-panel')
+        self.get_style_context().add_class('chiral-panel')
         self._files = []
         self._files_root = None
         self._files_time = 0
         self._items = []
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.get_style_context().add_class('forge-cmd')
+        box.get_style_context().add_class('chiral-cmd')
         self.add(box)
         self.entry = Gtk.Entry()
         self.entry.set_placeholder_text('command · @file · #ask the AI agent · 1-9 window · or a shell command')
@@ -86,7 +86,7 @@ class CommandBar(Gtk.EventBox):
         self.entry.connect('activate', lambda *_: self._run_selected())
         box.pack_start(self.entry, False, False, 0)
         self.list = Gtk.ListBox()
-        self.list.get_style_context().add_class('forge-list')
+        self.list.get_style_context().add_class('chiral-list')
         self.list.set_activate_on_single_click(True)
         self.list.connect('row-activated', lambda _l, row: self._run(row.get_index()))
         box.pack_start(self.list, False, False, 0)
@@ -240,7 +240,7 @@ class Toast(Gtk.Revealer):
         self.set_margin_top(8)
         self.set_margin_end(8)
         box = Gtk.EventBox()
-        box.get_style_context().add_class('forge-toast')
+        box.get_style_context().add_class('chiral-toast')
         self.label = Gtk.Label()
         self.label.set_margin_start(10)
         self.label.set_margin_end(10)

@@ -1,6 +1,6 @@
-"""The settings window (Shift+↑ → settings, or settings: appearance / font / ... · `forge settings`).
+"""The settings window (Shift+↑ → settings, or settings: appearance / font / ... · `chiral settings`).
 
-Every change applies immediately and is saved to ~/.config/forge/forge.toml a moment later, so the
+Every change applies immediately and is saved to ~/.config/chiral/chiral.toml a moment later, so the
 file and the window always agree. Themes are shown as small live previews.
 """
 import copy
@@ -30,7 +30,7 @@ class ThemeCard(Gtk.EventBox):
         super().__init__()
         self.name = name
         th = themes.THEMES[name]
-        self.get_style_context().add_class('forge-card')
+        self.get_style_context().add_class('chiral-card')
         self.set_tooltip_text(th['label'])
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.add(box)
@@ -123,15 +123,15 @@ class Swatch(Gtk.EventBox):
 
 class SettingsWindow(Gtk.Window):
     def __init__(self, win):
-        super().__init__(title='Forge Settings')
+        super().__init__(title='Chiral Settings')
         self.win = win
         self.set_transient_for(win)
         self.set_default_size(880, 620)
-        self.get_style_context().add_class('forge-settings')
+        self.get_style_context().add_class('chiral-settings')
         self._save_source = 0
         self._building = True
 
-        header = Gtk.HeaderBar(title='Forge Settings', subtitle='changes apply immediately')
+        header = Gtk.HeaderBar(title='Chiral Settings', subtitle='changes apply immediately')
         header.set_show_close_button(True)
         file_btn = Gtk.Button(label='Open settings file')
         file_btn.connect('clicked', lambda *_: (self.win.open_file(config.CONFIG_PATH), self.win.present()))
@@ -475,10 +475,10 @@ class SettingsWindow(Gtk.Window):
         if not session.firewall_enabled():
             return                                  # no firewall running: nothing to open
         port = int(self.get('sharing.port', session.DEFAULT_PORT))
-        cmd = 'sudo ufw allow from %s to any port %d proto tcp comment "forge team session"' % (ip, port)
+        cmd = 'sudo ufw allow from %s to any port %d proto tcp comment "chiral team session"' % (ip, port)
         if self._confirm('Allow %s through the firewall?' % ip,
                          'Your firewall is on, so this person cannot reach your N session yet.\n'
-                         'Forge will run this in a floating terminal (it asks for your password):\n\n'
+                         'Chiral will run this in a floating terminal (it asks for your password):\n\n'
                          '<tt>%s</tt>' % GLib.markup_escape_text(cmd), 'Allow'):
             self.win._run_setup('firewall: allow %s' % ip, cmd)
             self.win.present()
@@ -492,7 +492,7 @@ class SettingsWindow(Gtk.Window):
         port = int(self.get('sharing.port', session.DEFAULT_PORT))
         cmd = 'sudo ufw delete allow from %s to any port %d proto tcp' % (ip, port)
         if self._confirm('Also close the firewall for %s?' % ip,
-                         'Forge will run:\n\n<tt>%s</tt>' % GLib.markup_escape_text(cmd), 'Close it'):
+                         'Chiral will run:\n\n<tt>%s</tt>' % GLib.markup_escape_text(cmd), 'Close it'):
             self.win._run_setup('firewall: remove %s' % ip, cmd)
             self.win.present()
 
@@ -526,8 +526,8 @@ class SettingsWindow(Gtk.Window):
         box = self._page('keys', 'Keys')
         self._heading(box, 'When a program such as nano runs')
         self._row(box, 'Shift + arrows', self._combo('keys.shift_arrows', [('smart', 'Go to the program (smart)'),
-                                                                           ('always', 'Always Forge')], 'smart'),
-                  'Ctrl+Shift+arrows always reach Forge.')
+                                                                           ('always', 'Always Chiral')], 'smart'),
+                  'Ctrl+Shift+arrows always reach Chiral.')
         self._row(box, 'Ctrl + ← / →', self._combo('keys.ctrl_arrows', [('smart', 'Move focus, programs keep them (smart)'),
                                                                        ('always', 'Always move focus'), ('off', 'Off')], 'smart'))
         self._heading(box, 'All shortcuts')

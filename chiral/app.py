@@ -1,7 +1,7 @@
 """Single-instance application with any number of windows.
 
-Every `forge ...` call is forwarded to the running Forge over D-Bus. Calls made from a shell inside a
-Forge window (nano pop-outs, $EDITOR, forge -f ...) go back to that same window; `forge --new-window`
+Every `chiral ...` call is forwarded to the running Chiral over D-Bus. Calls made from a shell inside a
+Chiral window (nano pop-outs, $EDITOR, chiral -f ...) go back to that same window; `chiral --new-window`
 (the Ctrl+Alt+F shortcut) opens another window; other calls go to the window you used last.
 """
 import os
@@ -10,20 +10,20 @@ from gi.repository import Gio, Gtk
 
 from . import config
 
-USAGE = '''usage: forge [PATH[:LINE]]...        open a folder or file (files open in a sub-terminal)
-       forge --new-window [PATH]      open another Forge window (the Ctrl+Alt+F shortcut does this)
-       forge -f "CMD"                 run CMD in a new sub-terminal
-       forge -x FILE                  open FILE in the hex viewer
-       forge open [PATH]              show PATH in Nautilus
-       forge settings                 open the settings window
-       forge --popout [--wait] -- PROGRAM ARGS...
+USAGE = '''usage: chiral [PATH[:LINE]]...        open a folder or file (files open in a sub-terminal)
+       chiral --new-window [PATH]      open another Chiral window (the Ctrl+Alt+F shortcut does this)
+       chiral -f "CMD"                 run CMD in a new sub-terminal
+       chiral -x FILE                  open FILE in the hex viewer
+       chiral open [PATH]              show PATH in Nautilus
+       chiral settings                 open the settings window
+       chiral --popout [--wait] -- PROGRAM ARGS...
                                       run PROGRAM in a sub-terminal (used by the shell integration;
                                       --wait returns when it closes, so it works as $EDITOR)
 
 keys:  Shift+→ new terminal column   Shift+← close it   Shift+↑ command bar   Shift+↓ windows
        Ctrl+Shift+F files   Ctrl+←/→ move focus   Shift+↑ → "AI agent" opens Claude in a floating window
        Ctrl+Shift+T new sub-terminal   Ctrl+Shift+W close it   Ctrl+Shift+E Claude explains the last failure
-       Ctrl+Shift+arrows reach Forge even while nano/vim are running
+       Ctrl+Shift+arrows reach Chiral even while nano/vim are running
 '''
 
 
@@ -73,11 +73,11 @@ def parse(args):
     return opts
 
 
-class ForgeApp(Gtk.Application):
+class ChiralApp(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id='org.forge.Forge',
+        super().__init__(application_id='org.chiral.Chiral',
                          flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE
-                         | Gio.ApplicationFlags.SEND_ENVIRONMENT)   # so calls from a Forge shell find their window
+                         | Gio.ApplicationFlags.SEND_ENVIRONMENT)   # so calls from a Chiral shell find their window
         self.cfg = None
         self.windows = {}            # window id -> MainWindow
         self.next_window_id = 1
@@ -116,12 +116,12 @@ class ForgeApp(Gtk.Application):
             opts = parse(args)
         except CliError as e:
             if self.window:
-                self.window.toast('forge: %s' % e)
+                self.window.toast('chiral: %s' % e)
             return 2
-        caller = None                        # the Forge window whose shell ran this command, if any
+        caller = None                        # the Chiral window whose shell ran this command, if any
         for item in cl.get_environ() or []:
             item = item if isinstance(item, str) else item.decode(errors='ignore')
-            if item.startswith('FORGE_WINDOW_ID='):
+            if item.startswith('CHIRAL_WINDOW_ID='):
                 try:
                     caller = self.windows.get(int(item.split('=', 1)[1]))
                 except ValueError:

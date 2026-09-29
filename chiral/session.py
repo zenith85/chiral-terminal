@@ -1,6 +1,6 @@
 """Team sessions: share your terminals with the people on your list, watch and type into theirs.
 
-  N  (top bar)  your share switch. On: Forge listens on the sharing port and accepts connections only
+  N  (top bar)  your share switch. On: Chiral listens on the sharing port and accepts connections only
                 from the IP addresses in Settings → Team. Off: nothing listens.
   NC (top bar)  everyone on your list, whether they are sharing, and their terminals. Click one to
                 open it in a floating window: you see it live and what you type goes into it.

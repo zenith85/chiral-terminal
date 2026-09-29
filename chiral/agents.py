@@ -1,7 +1,7 @@
 """AI agents: Claude Code in floating sub-terminals that watch what you do.
 
 Shift+↑ → "AI agent" opens one (Claude or Codex, already running) in the folder of the terminal you
-are in. It starts through bash, so tools installed with nvm are found even when Forge was started
+are in. It starts through bash, so tools installed with nvm are found even when Chiral was started
 from a desktop shortcut. Every command you finish
 in any terminal is written to a context file the agents can read (with the output of failed ones).
 When a command fails and `claude.watch = "auto"`, the agent you used last explains it — never while
@@ -19,8 +19,8 @@ AUTO_GAP_S = 15
 STARTUP_S = 4
 
 PROMPT = (
-    "You are an AI agent running inside Forge, a terminal on the user's Linux desktop, in a floating "
-    "window above their shells. Forge appends every command the user finishes in any of their "
+    "You are an AI agent running inside Chiral, a terminal on the user's Linux desktop, in a floating "
+    "window above their shells. Chiral appends every command the user finishes in any of their "
     "terminals (window, exit status, cwd, and the last lines of output) to {context}. Read that file "
     "whenever the user refers to what they are doing, what just happened, or a failure. Be brief. Do "
     "not edit files or run commands unless the user asks."
@@ -51,15 +51,15 @@ class AgentManager:
         else:
             kind = 'claude'
             cmd = acfg.get('command', 'claude')
-            launch = 'exec %s --append-system-prompt "$FORGE_AGENT_PROMPT"' % cmd
+            launch = 'exec %s --append-system-prompt "$CHIRAL_AGENT_PROMPT"' % cmd
         tool = shlex.split(cmd)[0] if cmd.strip() else kind
         # an interactive bash loads ~/.bashrc (nvm, PATH), then becomes the agent
         script = ('if command -v %s >/dev/null 2>&1; then %s; fi; '
-                  'printf "\\nforge: %s was not found in your shell PATH.\\n'
-                  'Install it, or set it under [claude] in forge settings. This window is a normal shell now.\\n\\n"; '
+                  'printf "\\nchiral: %s was not found in your shell PATH.\\n'
+                  'Install it, or set it under [claude] in chiral settings. This window is a normal shell now.\\n\\n"; '
                   'exec bash -i' % (shlex.quote(tool), launch, tool))
         argv = ['/bin/bash', '--rcfile', win.runtime.rc, '-i', '-c', script]
-        env = {'FORGE_AGENT_PROMPT': PROMPT.format(context=win.runtime.context)}
+        env = {'CHIRAL_AGENT_PROMPT': PROMPT.format(context=win.runtime.context)}
         title = '%s · %s' % (kind, os.path.basename(folder) or folder)
         sub = win.new_sub(title, argv=argv, cwd=folder, agent=True, extra_env=env)
         sub.agent_kind = kind
@@ -125,7 +125,7 @@ class AgentManager:
             self.win.toast('no failed command to explain yet')
             return
         status, command, win_label = self.last_failure
-        self.send('[forge] In %s, `%s` just exited with status %d. Its output is at the end of %s. '
+        self.send('[chiral] In %s, `%s` just exited with status %d. Its output is at the end of %s. '
                   'In 2-4 lines: what went wrong and how to fix it.'
                   % (win_label, command, status, self.win.runtime.context), sub)
 

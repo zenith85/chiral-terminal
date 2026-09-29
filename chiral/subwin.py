@@ -35,7 +35,7 @@ class SubWindow(Gtk.EventBox):
         self.radius = 0                   # > 0: rounded corners (AI agents)
         self.connect('size-allocate', lambda *_: self._apply_shape())
         self.connect('realize', lambda *_: self._apply_shape())
-        self.get_style_context().add_class('forge-sub')
+        self.get_style_context().add_class('chiral-sub')
 
         layers = Gtk.Overlay()
         self.layers = layers
@@ -45,14 +45,14 @@ class SubWindow(Gtk.EventBox):
         layers.add(box)
 
         self.titlebar = Gtk.EventBox()
-        self.titlebar.get_style_context().add_class('forge-title')
+        self.titlebar.get_style_context().add_class('chiral-title')
         self.titlebar.add_events(MOTION_MASKS)
         row = Gtk.Box(spacing=6)
         self.titlebar.add(row)
         self.label = Gtk.Label(xalign=0)
         self.label.set_ellipsize(3)       # Pango.EllipsizeMode.END
         self.meta = Gtk.Label()
-        self.meta.get_style_context().add_class('forge-meta')
+        self.meta.get_style_context().add_class('chiral-meta')
         row.pack_start(self.label, True, True, 0)
         row.pack_start(self.meta, False, False, 0)
         for text, tip, cb in (('_', 'Hide to the window bar (Shift+↓)', self._on_hide),
@@ -66,15 +66,15 @@ class SubWindow(Gtk.EventBox):
         box.pack_start(self.titlebar, False, False, 0)
 
         self.term = win.make_terminal()
-        self.term.forge_sub = self
-        self.term.forge_is_app = app_mode
+        self.term.chiral_sub = self
+        self.term.chiral_is_app = app_mode
         box.pack_start(self.term, True, True, 0)
 
         grip = Gtk.EventBox()
         grip.set_size_request(14, 14)
         grip.set_halign(Gtk.Align.END)
         grip.set_valign(Gtk.Align.END)
-        grip.get_style_context().add_class('forge-grip')
+        grip.get_style_context().add_class('chiral-grip')
         grip.add_events(MOTION_MASKS)
         layers.add_overlay(grip)
 

@@ -1,13 +1,13 @@
-"""Color themes: one palette colors the terminals and Forge's own panels.
+"""Color themes: one palette colors the terminals and Chiral's own panels.
 
-Each theme has: bg / fg (terminal), pane / hdr / line / dim (Forge's panels, title bars, borders),
+Each theme has: bg / fg (terminal), pane / hdr / line / dim (Chiral's panels, title bars, borders),
 the 16 ANSI colors, its own matching accent, and whether it is dark or light.
 The presets are well-known palettes made for long sessions (Nord, Catppuccin, Tokyo Night, ...).
 """
 
 THEMES = {
-    'forge-dark': {
-        'label': 'Forge Dark', 'dark': True, 'accent': '#e8ae55',
+    'chiral-dark': {
+        'label': 'Chiral Dark', 'dark': True, 'accent': '#e8ae55',
         'bg': '#0c0d0f', 'fg': '#d6d3ca', 'pane': '#121316', 'hdr': '#1c1e22', 'line': '#2e3137', 'dim': '#6b6e76',
         'palette': ['#1b1d21', '#e27d6f', '#8fcf7a', '#e8ae55', '#7fa8e0', '#b79be0', '#6cc3ae', '#d8d6cf',
                     '#4a4d55', '#f0a498', '#b6e0a6', '#f3c47a', '#a8c4ec', '#cdb8ee', '#8fdcc9', '#ffffff'],
@@ -66,8 +66,8 @@ THEMES = {
         'palette': ['#000000', '#ff6b6b', '#b8ff6e', '#ffd24a', '#7cc4ff', '#ff9cf2', '#6effd1', '#ffffff',
                     '#6b6b6b', '#ff9a9a', '#d4ff9e', '#ffe38a', '#aad8ff', '#ffc2f7', '#a8ffe5', '#ffffff'],
     },
-    'forge-light': {
-        'label': 'Forge Light', 'dark': False, 'accent': '#a4610c',
+    'chiral-light': {
+        'label': 'Chiral Light', 'dark': False, 'accent': '#a4610c',
         'bg': '#faf8f3', 'fg': '#23211d', 'pane': '#f1ede4', 'hdr': '#e2dccd', 'line': '#cfc8b8', 'dim': '#8a8475',
         'palette': ['#23211d', '#b3372a', '#4c7a2a', '#a4610c', '#2a5fa8', '#7a3fb8', '#1f7a66', '#ddd7ca',
                     '#5e5a52', '#d0493a', '#5f9535', '#c27612', '#3a75c4', '#9150d4', '#289681', '#faf8f3'],
@@ -110,7 +110,10 @@ ANIMATION_MS = {'normal': 120, 'fast': 60, 'off': 0}
 
 
 def get(cfg):
-    theme = THEMES.get(cfg.get('theme'), THEMES['forge-dark'])
+    name = str(cfg.get('theme') or '')
+    if name.startswith('forge-'):                      # themes from before the rename
+        name = 'chiral-' + name[len('forge-'):]
+    theme = THEMES.get(name, THEMES['chiral-dark'])
     name = cfg.get('accent', 'theme')
     if isinstance(name, str) and name.startswith('#'):
         accent = name

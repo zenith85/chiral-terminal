@@ -134,7 +134,7 @@ class AwarenessBar(Gtk.EventBox):
         self.info = None
         self._busy = False
         self._again = False
-        self.get_style_context().add_class('forge-aware')
+        self.get_style_context().add_class('chiral-aware')
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(outer)
         self.row = Gtk.Box(spacing=10)
@@ -149,7 +149,7 @@ class AwarenessBar(Gtk.EventBox):
         self.path = Gtk.Label(xalign=0)
         self.path.set_ellipsize(1)
         self.path.set_max_width_chars(40)
-        self.path.get_style_context().add_class('forge-dim')
+        self.path.get_style_context().add_class('chiral-dim')
         self.row.pack_start(self.path, False, False, 0)
 
         self.git_btn = self._button(self._open_git)
@@ -169,7 +169,7 @@ class AwarenessBar(Gtk.EventBox):
         self.row.pack_start(self.markers, False, False, 0)
 
         self.right = Gtk.Label(xalign=1)
-        self.right.get_style_context().add_class('forge-dim')
+        self.right.get_style_context().add_class('chiral-dim')
         self.row.pack_end(self.right, False, False, 0)
         self.agent_chips = AgentChips(win)          # Claude · Codex · Local, with usage orbs
         self.row.pack_end(self.agent_chips, False, False, 6)
@@ -194,7 +194,7 @@ class AwarenessBar(Gtk.EventBox):
         label.set_markup('<b>%s</b>' % text)
         box.add(label)
         box.label = label
-        box.get_style_context().add_class('forge-share')
+        box.get_style_context().add_class('chiral-share')
         box.set_tooltip_text(tip)
         box.connect('button-press-event', lambda *_: (cb(), True)[1])
         return box
@@ -299,7 +299,7 @@ class AwarenessBar(Gtk.EventBox):
         b = Gtk.Button()
         b.set_relief(Gtk.ReliefStyle.NONE)
         b.set_can_focus(False)
-        b.get_style_context().add_class('forge-aware-item')
+        b.get_style_context().add_class('chiral-aware-item')
         b.connect('clicked', cb)
         b.set_no_show_all(True)
         return b
@@ -372,7 +372,7 @@ class AwarenessBar(Gtk.EventBox):
         for tag, tip in info['markers']:
             lbl = Gtk.Label(label=tag)
             lbl.set_tooltip_text(tip)
-            lbl.get_style_context().add_class('forge-aware-tag')
+            lbl.get_style_context().add_class('chiral-aware-tag')
             self.markers.pack_start(lbl, False, False, 0)
         self.markers.show_all()
         self.update_right()

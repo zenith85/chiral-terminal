@@ -1,13 +1,13 @@
-"""Settings: ~/.config/forge/forge.toml (a small TOML subset, no dependencies)."""
+"""Settings: ~/.config/chiral/chiral.toml (a small TOML subset, no dependencies)."""
 import copy
 import os
 import re
 
-CONFIG_DIR = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.expanduser('~/.config'), 'forge')
-CONFIG_PATH = os.path.join(CONFIG_DIR, 'forge.toml')
+CONFIG_DIR = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.expanduser('~/.config'), 'chiral')
+CONFIG_PATH = os.path.join(CONFIG_DIR, 'chiral.toml')
 
 DEFAULTS = {
-    'theme': 'forge-dark',
+    'theme': 'chiral-dark',
     'accent': 'theme',
     'animations': 'normal',
     'background': 'strands',
@@ -32,10 +32,10 @@ DEFAULTS = {
     'sharing': {'name': '', 'port': 47800, 'allow_input': True, 'peers': []},
 }
 
-DEFAULT_FILE = '''# Forge settings. Save the file and changes apply immediately.
+DEFAULT_FILE = '''# Chiral settings. Save the file and changes apply immediately.
 
-theme = "forge-dark"        # forge-dark, nord, catppuccin-mocha, tokyo-night, everforest, rose-pine, kanagawa, gruvbox,
-                            # solarized-dark, high-contrast, forge-light, catppuccin-latte, gruvbox-light, solarized-light
+theme = "chiral-dark"        # chiral-dark, nord, catppuccin-mocha, tokyo-night, everforest, rose-pine, kanagawa, gruvbox,
+                            # solarized-dark, high-contrast, chiral-light, catppuccin-latte, gruvbox-light, solarized-light
 accent = "theme"            # theme (the theme's own), amber, teal, blue, sky, sage, rose, coral, violet, lavender, or "#rrggbb"
 animations = "normal"       # normal (120 ms), fast (60 ms), off
 background = "strands"      # strands: faint moving strands behind the text; off: plain
@@ -66,7 +66,7 @@ default_agent = "claude"   # what Shift+↑ → "AI agent" opens: claude or code
 watch = "auto"              # auto: explain failed commands, notify: only show them, off
 
 [keys]
-shift_arrows = "smart"      # smart: nano, vim etc. keep Shift+arrows; always: Forge always takes them
+shift_arrows = "smart"      # smart: nano, vim etc. keep Shift+arrows; always: Chiral always takes them
 ctrl_arrows = "smart"       # Ctrl+←/→ move focus: tree, main, sub-terminals, Claude. smart: nano etc. keep them; off
 '''
 
@@ -155,8 +155,16 @@ def _merge(base, over):
             base[k] = v
 
 
+OLD_CONFIG_PATH = os.path.join(os.environ.get('XDG_CONFIG_HOME') or os.path.expanduser('~/.config'),
+                               'forge', 'forge.toml')
+
+
 def load():
     cfg = copy.deepcopy(DEFAULTS)
+    if not os.path.exists(CONFIG_PATH) and os.path.exists(OLD_CONFIG_PATH):
+        os.makedirs(CONFIG_DIR, exist_ok=True)       # carry settings over from before the rename
+        with open(OLD_CONFIG_PATH) as src, open(CONFIG_PATH, 'w') as dst:
+            dst.write(src.read())
     if not os.path.exists(CONFIG_PATH):
         os.makedirs(CONFIG_DIR, exist_ok=True)
         with open(CONFIG_PATH, 'w') as f:
@@ -224,7 +232,7 @@ LAYOUT = [
                  ('port', 'the port N listens on (same for everyone in the team)'),
                  ('allow_input', 'people watching you may type into your terminal'),
                  ('peers', 'who may join you and whom NC lists: "Name=IP"')]),
-    ('keys', [('shift_arrows', 'smart: nano, vim etc. keep Shift+arrows; always: Forge always takes them'),
+    ('keys', [('shift_arrows', 'smart: nano, vim etc. keep Shift+arrows; always: Chiral always takes them'),
               ('ctrl_arrows', 'Ctrl+←/→ move focus. smart: nano etc. keep them; off')]),
 ]
 
@@ -240,7 +248,7 @@ def _fmt(v):
 
 
 def render(cfg):
-    out = ['# Forge settings. Change them in the settings window (Shift+↑ → settings) or here; saving applies them.', '']
+    out = ['# Chiral settings. Change them in the settings window (Shift+↑ → settings) or here; saving applies them.', '']
     for section, keys in LAYOUT:
         values = cfg if section is None else cfg.get(section, {})
         if section is not None:

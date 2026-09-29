@@ -1,0 +1,5 @@
+#!/bin/sh
+# Chiral launcher. Uses the system Python, which has the GTK/VTE bindings.
+CHIRAL_HOME="$(dirname "$(dirname "$(readlink -f "$0")")")"
+export PYTHONPATH="$CHIRAL_HOME${PYTHONPATH:+:$PYTHONPATH}"
+exec /usr/bin/python3 -m chiral "$@"

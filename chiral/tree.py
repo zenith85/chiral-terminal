@@ -23,7 +23,7 @@ class FileTree(Gtk.EventBox):
         self.win = win
         self.root = None
         self.modified = set()
-        self.get_style_context().add_class('forge-panel')
+        self.get_style_context().add_class('chiral-panel')
 
         outer = Gtk.Box()
         self.add(outer)
@@ -32,7 +32,7 @@ class FileTree(Gtk.EventBox):
         outer.pack_start(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL), False, False, 0)
 
         self.header = Gtk.Label(xalign=0)
-        self.header.get_style_context().add_class('forge-dim')
+        self.header.get_style_context().add_class('chiral-dim')
         self.header.set_ellipsize(1)      # start: keep the end of long paths
         self.header.set_max_width_chars(1)
         self.header.set_margin_start(8)
@@ -60,7 +60,7 @@ class FileTree(Gtk.EventBox):
         self.view.connect('key-press-event', self._on_key)
         self.view.connect('cursor-changed', lambda *_: self._schedule_preview())
         self._preview_source = 0
-        self._quiet = False           # cursor moves made by Forge itself: no preview
+        self._quiet = False           # cursor moves made by Chiral itself: no preview
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.add(self.view)
@@ -72,7 +72,7 @@ class FileTree(Gtk.EventBox):
         for side in ('start', 'end', 'top'):
             getattr(rbox, 'set_margin_' + side)(6)
         self.rename_label = Gtk.Label(xalign=0)
-        self.rename_label.get_style_context().add_class('forge-dim')
+        self.rename_label.get_style_context().add_class('chiral-dim')
         self.rename_entry = Gtk.Entry()
         self.rename_entry.connect('activate', lambda *_: self._finish_rename())
         self.rename_entry.connect('key-press-event', self._rename_key)
@@ -83,7 +83,7 @@ class FileTree(Gtk.EventBox):
         self._renaming = None
 
         self.clip_label = Gtk.Label(xalign=0)
-        self.clip_label.get_style_context().add_class('forge-accent')
+        self.clip_label.get_style_context().add_class('chiral-accent')
         self.clip_label.set_margin_start(8)
         self.clip_label.set_ellipsize(3)
         self.clip_label.set_max_width_chars(1)
@@ -91,7 +91,7 @@ class FileTree(Gtk.EventBox):
 
         hint = Gtk.Label(xalign=0)
         hint.set_markup('↑↓ preview · → / ← folder\nenter open · space keep\nctrl+c / x / v copy cut paste\nf2 rename · x hex · o nautilus\nt shell · r refresh · ctrl+o close')
-        hint.get_style_context().add_class('forge-dim')
+        hint.get_style_context().add_class('chiral-dim')
         hint.set_margin_start(8)
         hint.set_margin_top(4)
         hint.set_margin_bottom(6)

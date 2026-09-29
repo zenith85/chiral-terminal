@@ -68,7 +68,7 @@ class AgentChip(Gtk.EventBox):
         self.bar = bar
         self.kind = kind
         self.state = None
-        self.get_style_context().add_class('forge-aware-item')
+        self.get_style_context().add_class('chiral-aware-item')
         box = Gtk.Box(spacing=4)
         self.add(box)
         self.icon = Gtk.DrawingArea()

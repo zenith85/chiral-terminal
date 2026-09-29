@@ -1,4 +1,4 @@
-"""Terminal hex viewer: `python3 -m forge.hexview FILE`.
+"""Terminal hex viewer: `python3 -m chiral.hexview FILE`.
 
 Keys: arrows/j/k/h/l move · PgUp/PgDn · Home/End · g go to offset · / find (hex bytes or "text")
       n next match · q quit
@@ -190,7 +190,7 @@ class Viewer:
 
 def main():
     if len(sys.argv) != 2:
-        print('usage: python3 -m forge.hexview FILE')
+        print('usage: python3 -m chiral.hexview FILE')
         return 2
     path = sys.argv[1]
     if not os.path.isfile(path):
