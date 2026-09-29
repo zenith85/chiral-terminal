@@ -1,0 +1,5 @@
+#!/bin/sh
+# Forge launcher. Uses the system Python, which has the GTK/VTE bindings.
+FORGE_HOME="$(dirname "$(dirname "$(readlink -f "$0")")")"
+export PYTHONPATH="$FORGE_HOME${PYTHONPATH:+:$PYTHONPATH}"
+exec /usr/bin/python3 -m forge "$@"
