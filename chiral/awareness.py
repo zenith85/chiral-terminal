@@ -279,6 +279,7 @@ class AwarenessBar(Gtk.EventBox):
                     b.connect('clicked', lambda _b, t=term: (pop.popdown(),
                               self.win.open_remote(name, ip, port, t['id'], t['title'])))
                     terms.pack_start(b, False, False, 0)
+                terms.set_no_show_all(False)        # show_all() skips widgets marked no_show_all
                 terms.show_all()
                 finish_one()
             session.probe(self.win, name, ip, port, done)
