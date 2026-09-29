@@ -55,6 +55,7 @@ class SubWindow(Gtk.EventBox):
         self.meta.get_style_context().add_class('chiral-meta')
         row.pack_start(self.label, True, True, 0)
         row.pack_start(self.meta, False, False, 0)
+        self.title_row = row
         for text, tip, cb in (('_', 'Hide to the window bar (Shift+↓)', self._on_hide),
                               ('×', 'Close (Ctrl+Shift+W)', self._on_close)):
             b = Gtk.Button(label=text)
@@ -86,6 +87,12 @@ class SubWindow(Gtk.EventBox):
         self.term.connect('focus-in-event', lambda *_: self.win.focus_sub(self, grab=False))
         self.term.connect('size-allocate', lambda *_: GLib.idle_add(self._update_meta))
         self.update_title()
+
+    def add_title_widget(self, widget):
+        """Put a small button in the title bar, before the hide and close buttons."""
+        self.title_row.pack_start(widget, False, False, 0)
+        self.title_row.reorder_child(widget, 2)
+        widget.show_all()
 
     def set_border(self, px):
         """Border thickness. Margins on the content (not set_border_width, whose area GTK does not

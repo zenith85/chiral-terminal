@@ -11,17 +11,20 @@ back. Messages are one JSON object per line over TCP. The traffic is NOT encrypt
 network or over an encrypted one such as Tailscale.
 """
 import base64
+import math
+import time
 import getpass
 import json
 import os
 import socket
 import subprocess
 
-from gi.repository import GLib, Gio
+from gi.repository import GLib, Gio, Gtk
 
 from . import fonts
 
 DEFAULT_PORT = 47800
+BUZZ_GAP_S = 2.0          # one buzz per person every 2 seconds at most
 FRAME_MS = 70
 PROTOCOL = 1
 
@@ -87,7 +90,9 @@ def _read_lines(conn, on_line, on_close):
     def got(s, res):
         try:
             line, _n = s.read_line_finish_utf8(res)
-        except GLib.Error:
+        except GLib.Error as e:
+            if os.environ.get('CHIRAL_DEBUG'):
+                print('chiral: read error:', e.message, flush=True)
             line = None
         if line is None:
             on_close()
@@ -161,6 +166,7 @@ class Viewer:
         self.last = None             # lines we sent last time, to send only changes
         self.last_size = None
         self.last_cursor = None
+        self.last_buzz = 0.0
 
 
 class ShareServer:
@@ -266,6 +272,11 @@ class ShareServer:
             self._send_frame(v, t)
             self.win.toast('%s is watching your %s' % (v.name, m.get('term')))
             self.win.aware.update_share()
+        elif kind == 'buzz':
+            now = time.monotonic()
+            if now - v.last_buzz >= BUZZ_GAP_S:
+                v.last_buzz = now
+                self.win.buzzed(v.name)
         elif kind == 'input' and v.term_id and self.cfg().get('allow_input', True):
             t = self._term(v.term_id)
             if t is not None:
@@ -370,6 +381,10 @@ class RemoteView:
         self.can_type = True
         self.sub = win.new_sub('%s · %s' % (peer_name, title), remote=True)
         self.sub.remote = self
+        self.peer_name = peer_name
+        self.bell = BellButton(self.buzz)
+        self.bell.set_tooltip_text('Buzz %s: their Chiral shakes and rings (Ctrl+Shift+B)' % peer_name)
+        self.sub.add_title_widget(self.bell)
         t = self.sub.term
         t.set_scrollback_lines(0)
         t.feed(b'\x1b[2mconnecting to %s ...\x1b[0m\r\n' % peer_name.encode())
@@ -384,6 +399,9 @@ class RemoteView:
         except GLib.Error as e:
             self._message_line('could not connect: %s' % e.message)
             return
+        # the client's timeout was for connecting; a quiet terminal must not drop the connection
+        self.conn.get_socket().set_timeout(0)
+        self.conn.get_socket().set_keepalive(True)
         _read_lines(self.conn, self._message, self._closed)
         _send(self.conn, {'t': 'hello', 'name': self.win.cfg.get('sharing', {}).get('name') or my_name(), 'v': PROTOCOL})
         _send(self.conn, {'t': 'watch', 'term': self.term_id})
@@ -438,6 +456,14 @@ class RemoteView:
         out.append('\x1b[0m\x1b[%d;%dH\x1b[?25h' % (min(cr, visible - 1) + 1, cc + 1))
         self.sub.term.feed(''.join(out).encode())
 
+    def buzz(self):
+        if self.conn is None:
+            self.win.toast('not connected')
+            return
+        _send(self.conn, {'t': 'buzz'})
+        self.bell.ring()
+        self.win.toast('buzzed %s' % self.peer_name)
+
     def _typed(self, _t, text, _size):
         if self.conn is None or not self.can_type:
             return
@@ -451,3 +477,47 @@ class RemoteView:
             except GLib.Error:
                 pass
             self.conn = None
+
+
+class BellButton(Gtk.Button):
+    """A small bell for a remote window's title bar; it swings when you buzz."""
+
+    def __init__(self, on_click):
+        super().__init__()
+        self.set_relief(Gtk.ReliefStyle.NONE)
+        self.set_can_focus(False)
+        self.swing_until = 0.0
+        area = Gtk.DrawingArea()
+        area.set_size_request(12, 12)
+        area.connect('draw', self._draw)
+        self.area = area
+        self.add(area)
+        self.connect('clicked', lambda *_: on_click())
+
+    def ring(self):
+        self.swing_until = time.monotonic() + 0.6
+
+        def tick():
+            self.area.queue_draw()
+            return time.monotonic() < self.swing_until
+        GLib.timeout_add(30, tick)
+
+    def _draw(self, area, cr):
+        w, h = area.get_allocated_width(), area.get_allocated_height()
+        color = self.get_style_context().get_color(self.get_state_flags())
+        left = self.swing_until - time.monotonic()
+        angle = math.sin(left * 40) * 0.5 * max(0.0, left / 0.6) if left > 0 else 0.0
+        cr.translate(w / 2, 1.5)
+        cr.rotate(angle)
+        s = min(w, h)
+        cr.set_source_rgba(color.red, color.green, color.blue, 1)
+        cr.move_to(-s * 0.36, s * 0.66)                      # the bell
+        cr.curve_to(-s * 0.3, s * 0.15, -s * 0.22, s * 0.08, 0, s * 0.08)
+        cr.curve_to(s * 0.22, s * 0.08, s * 0.3, s * 0.15, s * 0.36, s * 0.66)
+        cr.close_path()
+        cr.fill()
+        cr.rectangle(-s * 0.42, s * 0.62, s * 0.84, s * 0.08)
+        cr.fill()
+        cr.arc(0, s * 0.8, s * 0.1, 0, 2 * math.pi)         # the clapper
+        cr.fill()
+        return False

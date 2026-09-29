@@ -343,6 +343,8 @@ class MainWindow(Gtk.ApplicationWindow):
         .chiral-sub.remote {{ background-color: {palette5}; }}
         .chiral-frame.team {{ background-color: {palette5}; }}
         .chiral-frame.team.focused {{ background-color: {acc}; }}
+        .chiral-frame.buzz, .chiral-frame.focused.buzz, .chiral-frame.team.buzz, .chiral-frame.team.focused.buzz,
+        .chiral-sub.buzz, .chiral-sub.focused.buzz, .chiral-sub.remote.buzz {{ background-color: {palette1}; }}
         .chiral-sub.remote.focused {{ background-color: {acc}; }}
         .chiral-settings stacksidebar row:selected {{ background-color: {acc}; color: #101010; }}
         .chiral-settings switch:checked {{ background-color: {acc}; border-color: {acc}; }}
@@ -357,7 +359,8 @@ class MainWindow(Gtk.ApplicationWindow):
         .chiral-accent {{ color: {acc}; }}
         .chiral-toast {{ background-color: {hdr}; color: {fg}; border: 1px solid {line}; font-family: "{family}"; }}
         vte-terminal {{ padding: 2px 4px; }}
-        '''.format(family=family, acc=acc, palette6=th['palette'][6], palette5=th['palette'][5], **th)
+        '''.format(family=family, acc=acc, palette6=th['palette'][6], palette5=th['palette'][5],
+                   palette1=th['palette'][1], **th)
         self.css.load_from_data(css.encode())
         if hasattr(self, 'aware'):
             self.aware.set_visible(bool(self.cfg.get('awareness', True)))
@@ -692,6 +695,9 @@ class MainWindow(Gtk.ApplicationWindow):
             if name == 'f':
                 self.toggle_panel('tree')
                 return True
+            if name == 'b' and term is not None and term.chiral_sub and getattr(term.chiral_sub, 'remote', None):
+                term.chiral_sub.remote.buzz()        # ring the person whose terminal this is
+                return True
 
         if mods == CTRL and key == Gdk.KEY_o:
             smart = self.cfg['keys'].get('shift_arrows', 'smart') == 'smart'
@@ -955,6 +961,50 @@ class MainWindow(Gtk.ApplicationWindow):
         elif self.share.start():
             self.toast('sharing your own terminals (full access)')
         self.aware.update_share()
+
+    def buzzed(self, name):
+        """A teammate rang us: shake, flash the borders, bell, a note, and a notification if we are not in front."""
+        self.toast('%s is buzzing you' % name)
+        try:
+            self.get_display().beep()
+        except Exception:
+            pass
+        if not self.is_active():
+            self.set_urgency_hint(True)
+            GLib.timeout_add(4000, lambda: (self.set_urgency_hint(False), False)[1])
+            try:
+                note = Gio.Notification.new('Chiral Terminal')
+                note.set_body('%s is buzzing you' % name)
+                self.app.send_notification('buzz', note)
+            except Exception:
+                pass
+        self.shake()
+
+    def shake(self):
+        if getattr(self, '_shaking', False):
+            return
+        self._shaking = True
+        gdk_win = self.get_window()
+        state = gdk_win.get_state() if gdk_win else 0
+        can_move = not (self.is_maximized() or state & Gdk.WindowState.FULLSCREEN)
+        x0, y0 = self.get_position()
+        offsets = [10, -10, 8, -8, 6, -6, 4, -4, 2, -2, 0]
+        frames = [self.main_frame] + [c.frame for c in self.columns] + list(self.subs)
+
+        def step(i=[0]):
+            n = i[0]
+            i[0] += 1
+            done = n >= len(offsets)
+            for f in frames:
+                ctx = f.get_style_context()
+                (ctx.add_class if (not done and n % 2 == 0) else ctx.remove_class)('buzz')
+            if can_move:
+                self.move(x0 + (0 if done else offsets[n]), y0)
+            if done:
+                self._shaking = False
+                return False
+            return True
+        GLib.timeout_add(35, step)
 
     def open_remote(self, peer_name, ip, port, term_id, title):
         aw, ah = self.workspace_size()

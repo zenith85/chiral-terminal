@@ -42,6 +42,9 @@ In **Settings → Team**, add the people who may join you (name + IP address) an
   (trusted people only).
 - **NC** lists everyone on your list: ● sharing (with their terminals) or ○ not. Click a terminal to
   open it in a floating window: live, in colour, and what you type goes to them.
+- **Buzz:** in a teammate's terminal window, click the bell in its title bar (or **Ctrl+Shift+B**): their
+  Chiral shakes, the borders flash, the bell rings, and they get a notification if Chiral is not in front.
+  At most one buzz per person every 2 seconds.
 - Both sides must have each other on their lists. The traffic is **not encrypted**: use a trusted
   network or Tailscale. A firewall may need the port (default 47800) opened for your teammates.
 
