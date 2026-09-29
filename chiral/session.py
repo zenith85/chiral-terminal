@@ -205,9 +205,17 @@ class ShareServer:
             self.service.close()
             self.service = None
 
-    # terminals a viewer can pick
+    def team_column(self):
+        return next((c for c in self.win.columns if getattr(c, 'team', False)), None)
+
+    # terminals a viewer can pick. Folder mode (the default): only the locked team terminal.
     def terminals(self):
         w = self.win
+        if self.cfg().get('mode', 'folder') == 'folder':
+            team = self.team_column()
+            if team is None:
+                return []
+            return [('col%d' % team.sid, team.term, 'team · %s' % (os.path.basename(team.folder) or team.folder))]
         out = [('main', w.main_term, 'main terminal')]
         for c in w.columns:
             out.append(('col%d' % c.sid, c.term, 'column %d' % c.number()))
@@ -222,8 +230,12 @@ class ShareServer:
     def info(self):
         terms = []
         for tid, t, title in self.terminals():
-            folder = self.win.cwd_of(t).replace(os.path.expanduser('~'), '~', 1)
-            terms.append({'id': tid, 'title': '%s · %s' % (title, folder),
+            col = getattr(t, 'chiral_column', None)
+            if col is not None and getattr(col, 'team', False):
+                folder = ''                      # the team terminal's title already names its folder
+            else:
+                folder = ' · ' + self.win.cwd_of(t).replace(os.path.expanduser('~'), '~', 1)
+            terms.append({'id': tid, 'title': '%s%s' % (title, folder),
                           'cols': t.get_column_count(), 'rows': t.get_row_count()})
         return {'t': 'info', 'v': PROTOCOL, 'name': self.cfg().get('name') or my_name(), 'sharing': True,
                 'input': bool(self.cfg().get('allow_input', True)), 'terms': terms}

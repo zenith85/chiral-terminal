@@ -34,8 +34,12 @@ A plain terminal with four hidden edges. By default it's just your shell, full s
 ## Team sessions
 
 In **Settings → Team**, add the people who may join you (name + IP address) and tell them your address.
-- **N** (top bar) turns sharing on: people on your list can see your main terminal and columns, and type
-  into them if "People watching you may type" is on. `N · 2` shows how many are watching.
+- **N** (top bar) turns sharing on for the folder you are in (e.g. `cd ~/work`, then N). Your team gets a
+  **locked team terminal** there (a violet column): it sees only that folder and its sub-folders, never
+  your home, keys, history or other programs (a bubblewrap sandbox with a clean environment; system
+  tools are read-only). Your own terminals are not shared. `N · 2` shows how many are watching.
+  Settings → Team → "What your team can reach" → "My own terminals" shares your real terminals instead
+  (trusted people only).
 - **NC** lists everyone on your list: ● sharing (with their terminals) or ○ not. Click a terminal to
   open it in a floating window: live, in colour, and what you type goes to them.
 - Both sides must have each other on their lists. The traffic is **not encrypted**: use a trusted

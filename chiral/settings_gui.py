@@ -433,6 +433,11 @@ class SettingsWindow(Gtk.Window):
         self._row(box, 'Your name', self._entry('sharing.name', '', width=24), 'Empty: %s' % session.my_name())
         self._row(box, 'Port', self._spin('sharing.port', 1024, 65535, 1, session.DEFAULT_PORT),
                   'The same for everyone in the team.')
+        self._row(box, 'What your team can reach', self._combo('sharing.mode', [
+            ('folder', 'Only the shared folder (locked team terminal)'),
+            ('full', 'My own terminals (full access, trusted people only)')], 'folder'),
+                  'With N on, the team gets a terminal that can only see the folder you are in '
+                  '(and its sub-folders): nothing else of your computer, keys or history.')
         self._row(box, 'People watching you may type', self._switch('sharing.allow_input', True))
 
         self._heading(box, 'People who may join you')

@@ -29,7 +29,7 @@ DEFAULTS = {
     'claude': {'command': 'claude', 'codex_command': 'codex', 'default_agent': 'claude', 'watch': 'auto',
                'local_model': ''},
     'keys': {'shift_arrows': 'smart', 'ctrl_arrows': 'smart'},
-    'sharing': {'name': '', 'port': 47800, 'allow_input': True, 'peers': []},
+    'sharing': {'name': '', 'port': 47800, 'allow_input': True, 'peers': [], 'mode': 'folder'},
 }
 
 DEFAULT_FILE = '''# Chiral settings. Save the file and changes apply immediately.
@@ -230,6 +230,7 @@ LAYOUT = [
                 ('watch', 'auto: explain failed commands, notify: only show them, off')]),
     ('sharing', [('name', 'how others see you; empty: user@computer'),
                  ('port', 'the port N listens on (same for everyone in the team)'),
+                 ('mode', 'folder: a locked team terminal that sees only the shared folder; full: your own terminals'),
                  ('allow_input', 'people watching you may type into your terminal'),
                  ('peers', 'who may join you and whom NC lists: "Name=IP"')]),
     ('keys', [('shift_arrows', 'smart: nano, vim etc. keep Shift+arrows; always: Chiral always takes them'),

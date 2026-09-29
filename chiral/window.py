@@ -291,9 +291,10 @@ class MainWindow(Gtk.ApplicationWindow):
             f = self.cfg['font']
             t.set_font(fonts.desc(f.get('family', 'Monospace'), self._zoomed(f.get('size', 12), t)))
 
-    def spawn(self, term, role, win, cwd, argv=None, done=None, extra_env=None):
+    def spawn(self, term, role, win, cwd, argv=None, done=None, extra_env=None, env=None):
         argv = argv or self.runtime.shell_argv()
-        env = self.runtime.env(self.cfg, role, win) + ['%s=%s' % kv for kv in (extra_env or {}).items()]
+        if env is None:                      # env given: used as is (the locked team shell)
+            env = self.runtime.env(self.cfg, role, win) + ['%s=%s' % kv for kv in (extra_env or {}).items()]
 
         def spawned(t, pid, error, *_):
             if error:
@@ -340,6 +341,8 @@ class MainWindow(Gtk.ApplicationWindow):
         .chiral-share {{ padding: 0 6px; border-radius: 4px; font-weight: bold; }}
         .chiral-share.on {{ background-color: {acc}; color: #101010; }}
         .chiral-sub.remote {{ background-color: {palette5}; }}
+        .chiral-frame.team {{ background-color: {palette5}; }}
+        .chiral-frame.team.focused {{ background-color: {acc}; }}
         .chiral-sub.remote.focused {{ background-color: {acc}; }}
         .chiral-settings stacksidebar row:selected {{ background-color: {acc}; color: #101010; }}
         .chiral-settings switch:checked {{ background-color: {acc}; border-color: {acc}; }}
@@ -538,8 +541,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.main_font_size = size
 
     # ---------- terminal columns (Shift+→) ----------
-    def add_column(self):
-        col = Column(self, self.next_sid, self.focused_folder())
+    def add_column(self, folder=None, team=False):
+        col = Column(self, self.next_sid, folder or self.focused_folder(), team=team)
         self.next_sid += 1
         self.columns.append(col)
         self.tiles.pack_start(col.frame, True, True, 0)
@@ -920,14 +923,37 @@ class MainWindow(Gtk.ApplicationWindow):
         if self.share.on:
             self.share.stop()
             self.toast('sharing off')
-        else:
-            from .session import parse_peers
-            if not parse_peers(self.cfg.get('sharing', {}).get('peers', [])):
-                self.toast('add people in Settings → Team first')
-                self.open_settings('team')
+            self.aware.update_share()
+            return
+        from .session import parse_peers
+        from . import sandbox
+        scfg = self.cfg.get('sharing', {})
+        if not parse_peers(scfg.get('peers', [])):
+            self.toast('add people in Settings → Team first')
+            self.open_settings('team')
+            return
+        if scfg.get('mode', 'folder') == 'folder':
+            folder = self.focused_folder()
+            home = os.path.expanduser('~')
+            if not sandbox.available():
+                self.toast('bubblewrap (bwrap) is missing: sudo apt install bubblewrap')
                 return
+            if os.path.realpath(folder) in ('/', os.path.realpath(home)):
+                if not self._ask('Share your whole %s?' % ('computer' if folder == '/' else 'home folder'),
+                                 'Team members would see <b>everything</b> in <tt>%s</tt>. Usually you '
+                                 '<tt>cd</tt> into a project folder first, e.g. <tt>~/work</tt>.'
+                                 % GLib.markup_escape_text(folder), ok='Share it anyway'):
+                    return
+            team = self.share.team_column()
+            if team is None or os.path.realpath(team.folder) != os.path.realpath(folder):
+                if team is not None:
+                    self.close_column(team)
+                self.add_column(folder=folder, team=True)
             if self.share.start():
-                self.toast('sharing on · people on your list can see your terminals')
+                self.toast('sharing %s · your team gets a locked terminal there, nothing outside it'
+                           % folder.replace(home, '~', 1))
+        elif self.share.start():
+            self.toast('sharing your own terminals (full access)')
         self.aware.update_share()
 
     def open_remote(self, peer_name, ip, port, term_id, title):

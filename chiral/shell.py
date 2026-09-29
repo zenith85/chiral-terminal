@@ -67,6 +67,10 @@ fi
 # a command to run once when the shell starts (the tree's folder preview lists the folder)
 if [ -n "$CHIRAL_STARTUP" ]; then eval "$CHIRAL_STARTUP"; unset CHIRAL_STARTUP; fi
 
+if [ "$CHIRAL_ROLE" = team ]; then       # the locked team-session shell
+  PS1='\[\e[1;35m\]team\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]$ '
+fi
+
 if [ "$CHIRAL_ROLE" = main ]; then
   for __chiral_p in $CHIRAL_POPOUT; do
     eval "function $__chiral_p {
