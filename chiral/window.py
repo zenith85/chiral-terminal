@@ -730,14 +730,21 @@ class MainWindow(Gtk.ApplicationWindow):
             self.hide_panel('bar')
             return True
 
-        if self.panel_open('bar') and mods == 0 and Gdk.KEY_1 <= key <= Gdk.KEY_9:
-            n = key - Gdk.KEY_1
-            if n < len(self.subs):
-                self.show_sub(self.subs[n])
-            return True
-        if self.panel_open('bar') and mods == 0 and key in (Gdk.KEY_t, Gdk.KEY_h, Gdk.KEY_s):
-            {Gdk.KEY_t: self.tile, Gdk.KEY_h: self.hide_all, Gdk.KEY_s: self.show_all_subs}[key]()
-            return True
+        # window-bar letters (1-9 t h s) only when the bar was opened with Shift+↓, and only once:
+        # a bar that appeared because the mouse touched the bottom edge never takes your typing
+        if self.panel_open('bar') and 'bar' not in self.hover_open and mods == 0:
+            if Gdk.KEY_1 <= key <= Gdk.KEY_9:
+                n = key - Gdk.KEY_1
+                if n < len(self.subs):
+                    self.show_sub(self.subs[n])
+                self.hide_panel('bar')
+                return True
+            if key in (Gdk.KEY_t, Gdk.KEY_h, Gdk.KEY_s):
+                {Gdk.KEY_t: self.tile, Gdk.KEY_h: self.hide_all, Gdk.KEY_s: self.show_all_subs}[key]()
+                self.hide_panel('bar')
+                return True
+            if Gdk.keyval_to_unicode(key) or key in (Gdk.KEY_Return, Gdk.KEY_BackSpace, Gdk.KEY_Tab):
+                self.hide_panel('bar')                   # anything else: close the bar and type as usual
         return False
 
     # ---------- panels ----------
