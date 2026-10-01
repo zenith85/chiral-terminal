@@ -90,7 +90,7 @@ class FileTree(Gtk.EventBox):
         box.pack_start(self.clip_label, False, False, 0)
 
         hint = Gtk.Label(xalign=0)
-        hint.set_markup('↑↓ preview · → / ← folder\nenter open · space keep\nctrl+c / x / v copy cut paste\nf2 rename · x hex · o nautilus\nt shell · r refresh · ctrl+o close')
+        hint.set_markup('↑↓ preview · → / ← folder\nenter open · space lock preview\nctrl+c / x / v copy cut paste\nf2 rename · x hex · o nautilus\nt shell · r refresh · ctrl+o close')
         hint.get_style_context().add_class('chiral-dim')
         hint.set_margin_start(8)
         hint.set_margin_top(4)

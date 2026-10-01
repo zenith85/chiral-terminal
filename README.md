@@ -20,6 +20,9 @@ A plain terminal with four hidden edges. By default it's just your shell, full s
   `command nano file` to run it in place. In a sub-terminal, programs run where you type them.
 - **Smart Shift+arrows:** while nano/vim/etc. run in the focused terminal, Shift+arrows go to them (text
   selection). **Ctrl+Shift+arrows** always reach Chiral.
+- **Lock a preview:** tree previews have a lock in their title bar. Open lock = it follows your selection;
+  click it (or press Space in the tree) and that window stays on its file (text, hex, image, video)
+  while browsing opens a new preview beside it. Click a closed lock to make it follow again.
 - **Images** (png, jpg, gif, svg, webp, …) open in a window with two tabs: **image** (the picture, fitted,
   with its size and format) and **hex**. Click the tabs in the title bar or press **Ctrl+Tab**.
 - **Videos and audio** (mp4, mkv, webm, mov, avi, mp3, wav, ogg, flac, …) play inside a window with two

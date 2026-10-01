@@ -919,7 +919,11 @@ class MainWindow(Gtk.ApplicationWindow):
             geom = (old.x, old.y, old.w, old.h)          # keep where the user put it
         else:
             aw, ah = self.workspace_size()
-            geom = (min(320, aw // 3), 28, int(aw * 0.5), int(ah * 0.62))
+            x, y, w, h = min(320, aw // 3), 28, int(aw * 0.5), int(ah * 0.62)
+            taken = {(o.x, o.y) for o in self.subs if getattr(o, 'locked', False)}
+            while (x, y) in taken and x + w < aw - 40:     # don't cover a locked window: step aside
+                x, y = x + 44, y + 36
+            geom = (x, y, w, h)
         name = os.path.basename(path.rstrip('/')) or path
         folder = path if is_dir else os.path.dirname(path)
         env = None
@@ -938,6 +942,7 @@ class MainWindow(Gtk.ApplicationWindow):
                            app_mode=not is_dir, extra_env=env, focus=False, geom=geom, image=image, media=media)
         sub.term.chiral_keys_first = True    # a quick look: Ctrl+O, Shift/Ctrl+arrows always reach Chiral
         sub.preview_path = path
+        self._add_lock(sub)
         self.preview = sub
         if old:
             self.close_sub(old, refocus=False)
@@ -947,16 +952,61 @@ class MainWindow(Gtk.ApplicationWindow):
             self.close_sub(self.preview, refocus=False)
         self.preview = None
 
+    # the lock on a preview: open = follows the tree selection, closed = stays on its file
+    def _add_lock(self, sub):
+        btn = Gtk.Button()
+        btn.set_relief(Gtk.ReliefStyle.NONE)
+        btn.set_can_focus(False)
+        btn.set_image(Gtk.Image())
+        btn.connect('clicked', lambda *_: self.toggle_lock(sub))
+        sub.lock_btn = btn
+        sub.locked = False
+        sub.add_title_widget(btn)
+        self._show_lock(sub)
+
+    def _show_lock(self, sub):
+        btn = getattr(sub, 'lock_btn', None)
+        if btn is None:
+            return
+        btn.get_image().set_from_icon_name('changes-prevent-symbolic' if sub.locked else 'changes-allow-symbolic',
+                                           Gtk.IconSize.MENU)
+        btn.set_tooltip_text('locked: stays on this file · click to follow the tree again' if sub.locked else
+                             'following the tree · click (or Space in the tree) to lock it on this file')
+
+    def toggle_lock(self, sub):
+        if getattr(sub, 'locked', False):
+            self.unlock_preview(sub)
+        elif sub is self.preview:
+            self.keep_preview()
+
     def keep_preview(self):
+        """Lock the preview on its file: browsing the tree opens a new preview, this one stays."""
         sub = self.preview
         if sub not in self.subs:
-            self.toast('no preview to keep')
+            self.toast('no preview to lock')
             return
         self.preview = None
+        sub.locked = True
         sub.term.chiral_keys_first = False   # a normal window now: programs keep their keys again
         sub.title = sub.title.replace('preview · ', '', 1).replace(' · esc: back', '')
         sub.update_title()
-        self.toast('kept: ' + sub.title)
+        self._show_lock(sub)
+        self.toast('locked: ' + sub.title)
+
+    def unlock_preview(self, sub):
+        """Unlock: this window follows the tree selection again (the other follower closes)."""
+        if sub not in self.subs:
+            return
+        if self.preview in self.subs and self.preview is not sub:
+            self.close_sub(self.preview, refocus=False)
+        sub.locked = False
+        self.preview = sub
+        sub.term.chiral_keys_first = True
+        if not sub.title.startswith('preview · '):
+            sub.title = 'preview · %s · esc: back' % sub.title
+        sub.update_title()
+        self._show_lock(sub)
+        self.toast('following the tree again')
 
     # ---------- team sessions ----------
     def toggle_share(self):
