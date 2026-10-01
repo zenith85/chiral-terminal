@@ -26,7 +26,7 @@ from . import config, fonts, shell, themes
 from .bars import CommandBar, Toast, WindowBar
 from .awareness import AwarenessBar
 from .agents import AgentManager
-from . import imageview
+from . import imageview, mediaview
 from .session import RemoteView, ShareServer
 from .side import Column
 from .strands import StrandField
@@ -331,6 +331,8 @@ class MainWindow(Gtk.ApplicationWindow):
         .chiral-title button {{ padding: 0 6px; min-height: 0; min-width: 0; border: none; background: none;
                                box-shadow: none; color: inherit; font-family: "{family}"; }}
         .chiral-meta {{ opacity: 0.75; }}
+        .chiral-media {{ background-color: {bg}; color: {fg}; }}
+        .chiral-media button {{ color: {fg}; }}
         .chiral-title button.chiral-tab {{ opacity: 0.55; }}
         .chiral-title button.chiral-tab.active {{ opacity: 1; font-weight: bold; }}
         .chiral-grip {{ background-image: linear-gradient(135deg, transparent 55%, {line} 55%); }}
@@ -820,7 +822,7 @@ class MainWindow(Gtk.ApplicationWindow):
         return self.subs.index(sub) + 1 if sub in self.subs else len(self.subs) + 1
 
     def new_sub(self, title, argv=None, cwd=None, app_mode=False, on_exit=None, agent=False, extra_env=None,
-                focus=True, geom=None, remote=False, image=None):
+                focus=True, geom=None, remote=False, image=None, media=None):
         sub = SubWindow(self, self.next_sid, title, app_mode)
         sub.agent = agent
         if agent:
@@ -848,6 +850,9 @@ class MainWindow(Gtk.ApplicationWindow):
             self.spawn(sub.term, role='agent' if agent else 'sub', win=sub.sid, cwd=sub.cwd, argv=argv, extra_env=extra_env)
         if image:
             imageview.add_image_tab(sub, image)       # tabs: image (the picture) and hex
+        if media:
+            path, autoplay = media                    # tabs: video (a player) and hex
+            imageview.add_tabs(sub, mediaview.media_kind(path) or 'video', mediaview.MediaView(self, path, autoplay=autoplay))
         if focus:
             self.focus_sub(sub)
         else:                               # e.g. the tree's preview: on top, but focus stays where it is
@@ -897,6 +902,8 @@ class MainWindow(Gtk.ApplicationWindow):
             s.update_title()
         if sub is self.preview:
             self.preview = None
+        if hasattr(getattr(sub, 'tab_view', None), 'stop'):
+            sub.tab_view.stop()                      # a video: stop it and free the decoder
         if refocus and (self.focused_sub is sub or self.focused_sub is None):
             self._mark_focused(None)
             visible = [s for s in self.subs if s.get_visible()]
@@ -916,9 +923,11 @@ class MainWindow(Gtk.ApplicationWindow):
         name = os.path.basename(path.rstrip('/')) or path
         folder = path if is_dir else os.path.dirname(path)
         env = None
-        image = None
+        image = media = None
         if is_dir:
             argv, env = None, {'CHIRAL_STARTUP': 'ls -la --color=auto'}
+        elif os.path.isfile(path) and mediaview.media_kind(path) and mediaview.available():
+            argv, media = [sys.executable, '-m', 'chiral.hexview', path], (path, False)   # paused, silent
         elif os.path.isfile(path) and imageview.is_image(path):
             argv, image = [sys.executable, '-m', 'chiral.hexview', path], path
         elif is_binary(path):
@@ -926,7 +935,7 @@ class MainWindow(Gtk.ApplicationWindow):
         else:
             argv = ['less', '-R', '-M', path]
         sub = self.new_sub('preview · %s%s · esc: back' % (name, '/' if is_dir else ''), argv=argv, cwd=folder,
-                           app_mode=not is_dir, extra_env=env, focus=False, geom=geom, image=image)
+                           app_mode=not is_dir, extra_env=env, focus=False, geom=geom, image=image, media=media)
         sub.term.chiral_keys_first = True    # a quick look: Ctrl+O, Shift/Ctrl+arrows always reach Chiral
         sub.preview_path = path
         self.preview = sub
@@ -1085,6 +1094,10 @@ class MainWindow(Gtk.ApplicationWindow):
             self.new_shell(cwd=path)
             return
         name = os.path.basename(path)
+        if not hex_view and os.path.isfile(path) and mediaview.media_kind(path) and mediaview.available():
+            self.new_sub('%s %s' % (mediaview.media_kind(path), name), argv=[sys.executable, '-m', 'chiral.hexview', path],
+                         cwd=os.path.dirname(path), app_mode=True, media=(path, True))
+            return
         if not hex_view and os.path.isfile(path) and imageview.is_image(path):
             self.new_sub('image ' + name, argv=[sys.executable, '-m', 'chiral.hexview', path],
                          cwd=os.path.dirname(path), app_mode=True, image=path)

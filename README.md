@@ -22,6 +22,10 @@ A plain terminal with four hidden edges. By default it's just your shell, full s
   selection). **Ctrl+Shift+arrows** always reach Chiral.
 - **Images** (png, jpg, gif, svg, webp, …) open in a window with two tabs: **image** (the picture, fitted,
   with its size and format) and **hex**. Click the tabs in the title bar or press **Ctrl+Tab**.
+- **Videos and audio** (mp4, mkv, webm, mov, avi, mp3, wav, ogg, flac, …) play inside a window with two
+  tabs: **video** / **audio** (a player: play/pause, seek bar, time, mute) and **hex**. In the player:
+  **Space** play/pause, **← / →** 5 s back/forward, **m** mute. The tree's preview shows the first frame,
+  paused and silent. Uses GStreamer (installed on Ubuntu desktops).
 - Binary files open in the hex viewer (`g` go to offset, `/` find bytes or `"text"`, `n` next, `q` quit).
 - **AI agents:** Shift+↑ → `AI agent` (or `AI agent: claude` / `AI agent: codex`) opens the agent, already
   running, in a floating window in the folder you are in (`default_agent` under `[claude]` picks which).

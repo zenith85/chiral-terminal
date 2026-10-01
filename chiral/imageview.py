@@ -102,20 +102,24 @@ class ImageView(Gtk.DrawingArea):
 
 def add_image_tab(sub, path):
     """Turn a hex-viewer sub-window into two tabs: image (shown first) and hex."""
-    view = ImageView(sub.win, path)
+    add_tabs(sub, 'image', ImageView(sub.win, path))
+
+
+def add_tabs(sub, first, view):
+    """Two tabs in a hex-viewer sub-window: `first` (an image or a player, shown first) and hex."""
     view.chiral_sub = sub
     view.connect('focus-in-event', lambda *_: (sub.win.focus_sub(sub, grab=False), sub.win._mark_focused(sub), False)[2])
     stack = Gtk.Stack()
     sub.body_box.remove(sub.term)
-    stack.add_named(view, 'image')
+    stack.add_named(view, first)
     stack.add_named(sub.term, 'hex')
     sub.body_box.pack_start(stack, True, True, 0)
     stack.show_all()
-    stack.set_visible_child_name('image')
-    sub.image_view, sub.tabs = view, stack
+    stack.set_visible_child_name(first)
+    sub.tab_view, sub.first_tab, sub.tabs = view, first, stack
 
     buttons = {}
-    for name in ('image', 'hex'):
+    for name in (first, 'hex'):
         b = Gtk.Button(label=name)
         b.set_relief(Gtk.ReliefStyle.NONE)
         b.set_can_focus(False)
@@ -124,7 +128,7 @@ def add_image_tab(sub, path):
         buttons[name] = b
     sub.tab_buttons = buttons
     sub.add_title_widget(buttons['hex'])
-    sub.add_title_widget(buttons['image'])                     # inserted first: "image  hex  …  _ ×"
+    sub.add_title_widget(buttons[first])                       # inserted first: "image  hex  …  _ ×"
     _mark_tabs(sub)
 
 
@@ -138,8 +142,8 @@ def _mark_tabs(sub):
 def show_tab(sub, name):
     sub.tabs.set_visible_child_name(name)
     _mark_tabs(sub)
-    (sub.image_view if name == 'image' else sub.term).grab_focus()
+    (sub.tab_view if name != 'hex' else sub.term).grab_focus()
 
 
 def toggle_tab(sub):
-    show_tab(sub, 'hex' if sub.tabs.get_visible_child_name() == 'image' else 'image')
+    show_tab(sub, 'hex' if sub.tabs.get_visible_child_name() != 'hex' else sub.first_tab)

@@ -92,8 +92,8 @@ class SubWindow(Gtk.EventBox):
 
     def focus_widget(self):
         """What takes the keyboard in this window: the picture when the image tab is shown, else the terminal."""
-        if self.tabs is not None and self.tabs.get_visible_child_name() == 'image':
-            return self.image_view
+        if self.tabs is not None and self.tabs.get_visible_child_name() != 'hex':
+            return self.tab_view
         return self.term
 
     def add_title_widget(self, widget):
