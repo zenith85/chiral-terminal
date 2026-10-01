@@ -20,6 +20,8 @@ A plain terminal with four hidden edges. By default it's just your shell, full s
   `command nano file` to run it in place. In a sub-terminal, programs run where you type them.
 - **Smart Shift+arrows:** while nano/vim/etc. run in the focused terminal, Shift+arrows go to them (text
   selection). **Ctrl+Shift+arrows** always reach Chiral.
+- **Images** (png, jpg, gif, svg, webp, …) open in a window with two tabs: **image** (the picture, fitted,
+  with its size and format) and **hex**. Click the tabs in the title bar or press **Ctrl+Tab**.
 - Binary files open in the hex viewer (`g` go to offset, `/` find bytes or `"text"`, `n` next, `q` quit).
 - **AI agents:** Shift+↑ → `AI agent` (or `AI agent: claude` / `AI agent: codex`) opens the agent, already
   running, in a floating window in the folder you are in (`default_agent` under `[claude]` picks which).

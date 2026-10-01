@@ -26,6 +26,7 @@ from . import config, fonts, shell, themes
 from .bars import CommandBar, Toast, WindowBar
 from .awareness import AwarenessBar
 from .agents import AgentManager
+from . import imageview
 from .session import RemoteView, ShareServer
 from .side import Column
 from .strands import StrandField
@@ -330,6 +331,8 @@ class MainWindow(Gtk.ApplicationWindow):
         .chiral-title button {{ padding: 0 6px; min-height: 0; min-width: 0; border: none; background: none;
                                box-shadow: none; color: inherit; font-family: "{family}"; }}
         .chiral-meta {{ opacity: 0.75; }}
+        .chiral-title button.chiral-tab {{ opacity: 0.55; }}
+        .chiral-title button.chiral-tab.active {{ opacity: 1; font-weight: bold; }}
         .chiral-grip {{ background-image: linear-gradient(135deg, transparent 55%, {line} 55%); }}
         .chiral-sub.focused .chiral-grip {{ background-image: linear-gradient(135deg, transparent 55%, {acc} 55%); }}
         .chiral-bar button {{ padding: 1px 8px; min-height: 0; border: none; border-radius: 0; box-shadow: none;
@@ -609,6 +612,8 @@ class MainWindow(Gtk.ApplicationWindow):
             if widget.chiral_sub:
                 self.agents.touch(widget.chiral_sub)
             self.aware.follow(self.cwd_of(widget))
+        elif getattr(widget, 'chiral_sub', None) is not None:
+            self._mark_focused(widget.chiral_sub)     # the picture in an image window
         else:
             self._mark_focused(None)        # file tree or command bar: no terminal border is lit
 
@@ -651,7 +656,8 @@ class MainWindow(Gtk.ApplicationWindow):
         term = focus if isinstance(focus, Vte.Terminal) else None
 
         # inside the tree's preview window: Esc goes back to the tree
-        if term is not None and term.chiral_sub is not None and term.chiral_sub is self.preview:
+        in_sub = term.chiral_sub if term is not None else getattr(focus, 'chiral_sub', None)
+        if in_sub is not None and in_sub is self.preview:
             if key == Gdk.KEY_Escape and mods == 0:
                 if self.panel_open('tree'):
                     self.tree.view.grab_focus()
@@ -683,7 +689,8 @@ class MainWindow(Gtk.ApplicationWindow):
             if name == 't':
                 self.new_shell()
                 return True
-            if name == 'w' and self.focused_sub and term is self.focused_sub.term:
+            if name == 'w' and self.focused_sub and (term is self.focused_sub.term
+                                                      or focus is self.focused_sub.focus_widget()):
                 self.close_sub(self.focused_sub)
                 return True
             if name == 'w' and term is not None and term.chiral_column:
@@ -698,6 +705,11 @@ class MainWindow(Gtk.ApplicationWindow):
             if name == 'b' and term is not None and term.chiral_sub and getattr(term.chiral_sub, 'remote', None):
                 term.chiral_sub.remote.buzz()        # ring the person whose terminal this is
                 return True
+
+        owner = term.chiral_sub if term is not None else getattr(focus, 'chiral_sub', None)
+        if mods == CTRL and key in (Gdk.KEY_Tab, Gdk.KEY_ISO_Left_Tab) and owner is not None and owner.tabs is not None:
+            imageview.toggle_tab(owner)              # image <-> hex
+            return True
 
         if mods == CTRL and key == Gdk.KEY_o:
             smart = self.cfg['keys'].get('shift_arrows', 'smart') == 'smart'
@@ -808,7 +820,7 @@ class MainWindow(Gtk.ApplicationWindow):
         return self.subs.index(sub) + 1 if sub in self.subs else len(self.subs) + 1
 
     def new_sub(self, title, argv=None, cwd=None, app_mode=False, on_exit=None, agent=False, extra_env=None,
-                focus=True, geom=None, remote=False):
+                focus=True, geom=None, remote=False, image=None):
         sub = SubWindow(self, self.next_sid, title, app_mode)
         sub.agent = agent
         if agent:
@@ -834,6 +846,8 @@ class MainWindow(Gtk.ApplicationWindow):
             sub.get_style_context().add_class('remote')
         else:
             self.spawn(sub.term, role='agent' if agent else 'sub', win=sub.sid, cwd=sub.cwd, argv=argv, extra_env=extra_env)
+        if image:
+            imageview.add_image_tab(sub, image)       # tabs: image (the picture) and hex
         if focus:
             self.focus_sub(sub)
         else:                               # e.g. the tree's preview: on top, but focus stays where it is
@@ -851,8 +865,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self.overlay.reorder_overlay(sub, -1)
         self._keep_panels_on_top()
         self._mark_focused(sub)
-        if grab and not sub.term.has_focus():
-            sub.term.grab_focus()
+        target = sub.focus_widget()
+        if grab and not target.has_focus():
+            target.grab_focus()
 
     def show_sub(self, sub):
         sub.show()
@@ -901,14 +916,17 @@ class MainWindow(Gtk.ApplicationWindow):
         name = os.path.basename(path.rstrip('/')) or path
         folder = path if is_dir else os.path.dirname(path)
         env = None
+        image = None
         if is_dir:
             argv, env = None, {'CHIRAL_STARTUP': 'ls -la --color=auto'}
+        elif os.path.isfile(path) and imageview.is_image(path):
+            argv, image = [sys.executable, '-m', 'chiral.hexview', path], path
         elif is_binary(path):
             argv = [sys.executable, '-m', 'chiral.hexview', path]
         else:
             argv = ['less', '-R', '-M', path]
         sub = self.new_sub('preview · %s%s · esc: back' % (name, '/' if is_dir else ''), argv=argv, cwd=folder,
-                           app_mode=not is_dir, extra_env=env, focus=False, geom=geom)
+                           app_mode=not is_dir, extra_env=env, focus=False, geom=geom, image=image)
         sub.term.chiral_keys_first = True    # a quick look: Ctrl+O, Shift/Ctrl+arrows always reach Chiral
         sub.preview_path = path
         self.preview = sub
@@ -1067,6 +1085,10 @@ class MainWindow(Gtk.ApplicationWindow):
             self.new_shell(cwd=path)
             return
         name = os.path.basename(path)
+        if not hex_view and os.path.isfile(path) and imageview.is_image(path):
+            self.new_sub('image ' + name, argv=[sys.executable, '-m', 'chiral.hexview', path],
+                         cwd=os.path.dirname(path), app_mode=True, image=path)
+            return
         if hex_view or (hex_view is None and os.path.exists(path) and is_binary(path)):
             self.new_sub('hex ' + name, argv=[sys.executable, '-m', 'chiral.hexview', path],
                          cwd=os.path.dirname(path), app_mode=True)
@@ -1324,7 +1346,7 @@ class MainWindow(Gtk.ApplicationWindow):
         ring.append((self.main_term, 'main terminal'))
         for s in self.subs:
             if s.get_visible():
-                ring.append((s.term, '%d  %s' % (self.sub_number(s), s.title)))
+                ring.append((s.focus_widget(), '%d  %s' % (self.sub_number(s), s.title)))
         for c in self.columns:
             ring.append((c.term, 'column %d' % c.number()))
         return ring

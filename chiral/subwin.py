@@ -43,6 +43,8 @@ class SubWindow(Gtk.EventBox):
         self.add(layers)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         layers.add(box)
+        self.body_box = box
+        self.tabs = None              # image files: a Gtk.Stack with 'image' and 'hex'
 
         self.titlebar = Gtk.EventBox()
         self.titlebar.get_style_context().add_class('chiral-title')
@@ -87,6 +89,12 @@ class SubWindow(Gtk.EventBox):
         self.term.connect('focus-in-event', lambda *_: self.win.focus_sub(self, grab=False))
         self.term.connect('size-allocate', lambda *_: GLib.idle_add(self._update_meta))
         self.update_title()
+
+    def focus_widget(self):
+        """What takes the keyboard in this window: the picture when the image tab is shown, else the terminal."""
+        if self.tabs is not None and self.tabs.get_visible_child_name() == 'image':
+            return self.image_view
+        return self.term
 
     def add_title_widget(self, widget):
         """Put a small button in the title bar, before the hide and close buttons."""
