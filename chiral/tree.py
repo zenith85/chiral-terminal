@@ -474,6 +474,10 @@ class FileTree(Gtk.EventBox):
         if not self.win.panel_open('tree'):
             return False
         full, is_dir = self._selected()
+        if full and is_dir:                       # a folder: the main terminal goes there
+            self.win.close_preview()
+            self.win.cd_main(full)
+            return False
         current = self.win.preview
         if full and not (current in self.win.subs and getattr(current, 'preview_path', None) == full):
             self.win.show_preview(full, is_dir)

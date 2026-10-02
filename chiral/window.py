@@ -363,6 +363,8 @@ class MainWindow(Gtk.ApplicationWindow):
     # ---------- settings ----------
     def apply_config(self):
         self.theme, self.accent = themes.get(self.cfg)
+        if getattr(self, 'aware', None):
+            self.aware.update_hidden()
         th, acc = self.theme, self.accent
         family = self.cfg['font'].get('family', 'Monospace')
         css = '''
@@ -1004,6 +1006,30 @@ class MainWindow(Gtk.ApplicationWindow):
             visible = [s for s in self.subs if s.get_visible()]
             (visible[-1].term if visible else self.main_term).grab_focus()
         self._refresh_bar()
+
+    # ---------- the tree moves the main terminal ----------
+    def at_empty_prompt(self, t):
+        """True when the shell is waiting at its prompt with nothing typed yet."""
+        if self.term_busy(t):
+            return False
+        try:
+            col, row = t.get_cursor_position()
+            line = t.get_text_range(row, 0, row, max(0, col - 1), None, None)[0] or ''
+        except (TypeError, GLib.Error):
+            return False
+        line = line.rstrip('\n').rstrip()
+        return bool(line) and line[-1] in '$#>%'
+
+    def cd_main(self, folder):
+        """The tree landed on a folder: the main terminal goes there (only at an empty prompt)."""
+        t = self.main_term
+        if not os.path.isdir(folder) or self.live_cwd(t) == os.path.realpath(folder):
+            return False
+        if not self.at_empty_prompt(t):
+            return False
+        # leading space: kept out of history (ignorespace)
+        t.feed_child((' cd -- %s\r' % shlex.quote(folder)).encode())
+        return True
 
     # ---------- the tree's live preview ----------
     def show_preview(self, path, is_dir):

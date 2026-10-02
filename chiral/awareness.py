@@ -14,7 +14,7 @@ from gi.repository import GLib, Gtk
 
 from .agent_chips import AgentChips
 from .brand import BrandMark
-from . import session
+from . import config, session
 
 BINARY_EXT = {'.bin', '.hex', '.elf', '.o', '.so', '.a', '.img', '.iso', '.dat', '.exe', '.dll',
               '.class', '.pyc', '.dfu', '.uf2', '.srec', '.fw', '.rom', '.dump'}
@@ -173,6 +173,10 @@ class AwarenessBar(Gtk.EventBox):
         self.row.pack_end(self.right, False, False, 0)
         self.agent_chips = AgentChips(win)          # Claude · Codex · Local, with usage orbs
         self.row.pack_end(self.agent_chips, False, False, 6)
+        # H = the tree (Ctrl+O) shows hidden files (dotfiles)
+        self.hidden_btn = self._chip('H', '', lambda *_: self.toggle_hidden())
+        self.row.pack_end(self.hidden_btn, False, False, 0)
+        self.update_hidden()
 
         # team session: N = share my terminals, NC = see who is sharing and open theirs
         self.nc_btn = self._chip('NC', 'people on your list who are sharing · click to see their terminals', self._open_nc)
@@ -198,6 +202,25 @@ class AwarenessBar(Gtk.EventBox):
         box.set_tooltip_text(tip)
         box.connect('button-press-event', lambda *_: (cb(), True)[1])
         return box
+
+    def toggle_hidden(self):
+        tree_cfg = self.win.cfg.setdefault('tree', {})
+        tree_cfg['show_hidden'] = not tree_cfg.get('show_hidden', False)
+        try:
+            self.win.last_saved_settings = config.save(self.win.cfg)
+        except OSError as e:
+            self.win.toast('could not save: %s' % e)
+        if self.win.panel_open('tree'):
+            self.win.tree.refresh(self.win.tree.root or self.win.cwd)
+        self.update_hidden()
+        self.win.toast('tree: hidden files %s' % ('shown' if tree_cfg['show_hidden'] else 'hidden'))
+
+    def update_hidden(self):
+        on = self.win.cfg.get('tree', {}).get('show_hidden', False)
+        (self.hidden_btn.get_style_context().add_class if on else
+         self.hidden_btn.get_style_context().remove_class)('on')
+        self.hidden_btn.set_tooltip_text('hidden files in the tree (Ctrl+O): %s · click to %s'
+                                         % ('shown' if on else 'hidden', 'hide them' if on else 'show them'))
 
     def update_share(self):
         share = getattr(self.win, 'share', None)
