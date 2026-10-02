@@ -102,8 +102,7 @@ class FileTree(Gtk.EventBox):
         return Gtk.SizeRequestMode.CONSTANT_SIZE
 
     def do_get_preferred_width(self):
-        w = self.panel_width()
-        return w, w
+        return 1, self.panel_width()          # it may be squeezed while sliding in
 
     def do_get_preferred_width_for_height(self, _h):
         return self.do_get_preferred_width()

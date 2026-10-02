@@ -75,6 +75,51 @@ def _unpack(result):
     return True, result
 
 
+class Dock(Gtk.EventBox):
+    """Draws a column or the file tree in the floating layer, exactly where its placeholder sits in the
+    layout. The placeholder keeps the space (the main terminal still squeezes); the dock can be raised
+    above floating windows when it gets focus."""
+
+    def __init__(self, child):
+        super().__init__()
+        self.set_visible_window(True)      # its own window: only windows can be restacked above others
+        self.set_halign(Gtk.Align.START)
+        self.set_valign(Gtk.Align.START)
+        self.gw = self.gh = 1
+        self.add(child)
+
+    def do_get_request_mode(self):
+        return Gtk.SizeRequestMode.CONSTANT_SIZE
+
+    def do_get_preferred_width(self):
+        return self.gw, self.gw
+
+    def do_get_preferred_height(self):
+        return self.gh, self.gh
+
+    def do_get_preferred_width_for_height(self, _h):
+        return self.gw, self.gw
+
+    def do_get_preferred_height_for_width(self, _w):
+        return self.gh, self.gh
+
+    def follow(self, slot, overlay):
+        a = slot.get_allocation()
+        pos = slot.translate_coordinates(overlay, 0, 0) if slot.get_mapped() else None
+        if not pos or a.width < 2 or a.height < 2:
+            if self.get_visible():
+                self.hide()
+            return
+        x, y = int(pos[0]), int(pos[1])
+        if (x, y, a.width, a.height) != (self.get_margin_start(), self.get_margin_top(), self.gw, self.gh):
+            self.set_margin_start(max(0, x))
+            self.set_margin_top(max(0, y))
+            self.gw, self.gh = a.width, a.height
+            self.queue_resize()
+        if not self.get_visible():
+            self.show()
+
+
 def is_binary(path):
     try:
         with open(path, 'rb') as f:
@@ -139,6 +184,11 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # hidden edges
         self.tree = FileTree(self)
+        self.tree_slot = Gtk.Box()                 # keeps the tree's space in the layout ...
+        self.tree_slot.set_size_request(self.tree.panel_width(), -1)
+        self.tree_dock = Dock(self.tree)           # ... the tree itself is drawn in the floating layer
+        self.docks = [(self.tree_slot, self.tree_dock)]
+        self._follow_source = 0
         self.bar = WindowBar(self)
         self.cmd = CommandBar(self)
         self.agents = AgentManager(self)
@@ -146,7 +196,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.aware = AwarenessBar(self)           # top bar: what is in the focused terminal's folder
         outer.pack_start(self.aware, False, False, 0)
         self.revealers = {
-            'tree': self._revealer(self.tree, Gtk.RevealerTransitionType.SLIDE_RIGHT, Gtk.Align.START, Gtk.Align.FILL),
+            'tree': self._revealer(self.tree_slot, Gtk.RevealerTransitionType.SLIDE_RIGHT, Gtk.Align.START, Gtk.Align.FILL),
             'bar': self._revealer(self.bar, Gtk.RevealerTransitionType.SLIDE_UP, Gtk.Align.FILL, Gtk.Align.END),
             'cmd': self._revealer(self.cmd, Gtk.RevealerTransitionType.SLIDE_DOWN, Gtk.Align.CENTER, Gtk.Align.START),
         }
@@ -155,8 +205,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self.toast_widget = Toast()
         self.top_layers = [self.left_zone, self.bottom_zone, self.revealers['bar'],
                            self.revealers['cmd'], self.toast_widget]
+        self.overlay.add_overlay(self.tree_dock)
         for w in self.top_layers:
             self.overlay.add_overlay(w)
+        self.tree_slot.connect('size-allocate', lambda *_: self._schedule_follow())
+        self.overlay.connect('size-allocate', lambda *_: self._schedule_follow())
         # side panels take their own space: the main terminal squeezes instead of being covered
         root.pack_start(self.revealers['tree'], False, False, 0)
         root.reorder_child(self.revealers['tree'], 0)
@@ -553,8 +606,15 @@ class MainWindow(Gtk.ApplicationWindow):
         col = Column(self, self.next_sid, folder or self.focused_folder(), team=team)
         self.next_sid += 1
         self.columns.append(col)
-        self.tiles.pack_start(col.frame, True, True, 0)
-        col.frame.show_all()
+        col.slot = Gtk.Box()                       # its share of the width ...
+        col.dock = Dock(col.frame)                 # ... drawn in the floating layer, so it can come forward
+        self.tiles.pack_start(col.slot, True, True, 0)
+        self.overlay.add_overlay(col.dock)
+        self.docks.append((col.slot, col.dock))
+        col.slot.connect('size-allocate', lambda *_: self._schedule_follow())
+        col.slot.show()
+        col.dock.show_all()
+        self.raise_layer(col.dock)
         col.start()
         self.main_term.chiral_font = None
         col.term.grab_focus()
@@ -579,8 +639,11 @@ class MainWindow(Gtk.ApplicationWindow):
         i = self.columns.index(col)
         had_focus = col.term.has_focus()
         self.columns.remove(col)
-        self.tiles.remove(col.frame)
-        col.frame.destroy()
+        self.docks = [d for d in self.docks if d[1] is not col.dock]
+        self.tiles.remove(col.slot)
+        self.overlay.remove(col.dock)
+        col.slot.destroy()
+        col.dock.destroy()
         if self.active_tile is col.term:
             self.active_tile = None
         if had_focus or self.last_term is col.term:
@@ -603,6 +666,10 @@ class MainWindow(Gtk.ApplicationWindow):
         set_lit(self.main_frame, widget is self.main_term)
         for c in self.columns:
             set_lit(c.frame, widget is c.term)
+            if widget is c.term:
+                self.raise_layer(c.dock)            # a focused column comes forward
+        if widget is self.tree.view:
+            self.raise_layer(self.tree_dock)
         if isinstance(widget, Vte.Terminal):
             if widget.chiral_sub is None or widget.chiral_sub is not self.preview:
                 self.last_term = widget             # a preview is a quick look, not a place to return to
@@ -633,6 +700,29 @@ class MainWindow(Gtk.ApplicationWindow):
         if t.chiral_sub and not t.chiral_sub.get_visible():
             t = self.main_term
         t.grab_focus()
+
+    def _schedule_follow(self):
+        if not self._follow_source:
+            self._follow_source = GLib.idle_add(self._follow_docks)
+
+    def _follow_docks(self):
+        self._follow_source = 0
+        for slot, dock in self.docks:
+            dock.follow(slot, self.overlay)
+        return False
+
+    def raise_layer(self, widget):
+        """Bring a column, the tree or a floating window in front of the others (the main terminal stays behind)."""
+        self.overlay.reorder_overlay(widget, -1)
+        self._keep_panels_on_top()
+
+    def raise_tree(self):
+        """Ctrl+O: the tree and its previews in front of everything, AI agents included."""
+        self.raise_layer(self.tree_dock)
+        for s in self.subs:
+            if hasattr(s, 'preview_path'):
+                self.overlay.reorder_overlay(s, -1)
+        self._keep_panels_on_top()
 
     def _keep_panels_on_top(self):
         for w in self.top_layers:
@@ -782,6 +872,8 @@ class MainWindow(Gtk.ApplicationWindow):
             self.hover_open.discard(name)
         self.revealers[name].set_reveal_child(True)
         self._keep_panels_on_top()
+        if name == 'tree':
+            self.raise_tree()
         if by_hover:
             return
         if name == 'tree':
@@ -794,7 +886,10 @@ class MainWindow(Gtk.ApplicationWindow):
         if not self.panel_open(name):
             return
         self.hover_open.discard(name)
-        had_focus = self.revealers[name].get_focus_child() is not None
+        if name == 'tree':                         # the tree lives in its dock, not in the revealer
+            had_focus = self.tree.view.has_focus() or self.tree.rename_entry.has_focus()
+        else:
+            had_focus = self.revealers[name].get_focus_child() is not None
         self.revealers[name].set_reveal_child(False)
         if name == 'tree':
             in_preview = self.preview is not None and self.preview.term.has_focus()
