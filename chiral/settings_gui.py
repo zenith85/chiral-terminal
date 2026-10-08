@@ -128,6 +128,7 @@ class SettingsWindow(Gtk.Window):
         self.set_transient_for(win)
         self.set_default_size(880, 620)
         self.get_style_context().add_class('chiral-settings')
+        self.get_style_context().add_class(win.css_class)        # styled with its window's theme
         self._save_source = 0
         self._building = True
 
@@ -345,7 +346,6 @@ class SettingsWindow(Gtk.Window):
         for card in self.cards:
             card.set_selected(card.name == name)
         self._mark_accent()
-        self._sync_dark()
         return True
 
     def _pick_accent(self, name):
@@ -361,10 +361,6 @@ class SettingsWindow(Gtk.Window):
         c = Gdk.RGBA()
         c.parse(themes.get(self.cfg())[1])
         self.custom.set_rgba(c)
-
-    def _sync_dark(self):
-        th, _ = themes.get(self.cfg())
-        Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', th['dark'])
 
     def _page_font(self):
         box = self._page('font', 'Font')
@@ -566,7 +562,7 @@ class SettingsWindow(Gtk.Window):
             return
         self.win.cfg.clear()
         self.win.cfg.update(copy.deepcopy(config.DEFAULTS))
-        self.win.app.cfg = self.win.cfg
+        self.win.app.cfg = copy.deepcopy(self.win.cfg)
         self.win.apply_config()
         self._save()
         self.win.settings_window = None

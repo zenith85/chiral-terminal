@@ -97,6 +97,10 @@ class ChiralApp(Gtk.Application):
 
     def _new_window(self, start):
         from .window import MainWindow
+        # dialogs and tooltips (shared by all windows) stay dark; each window paints its own theme
+        Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
+        if self.windows:
+            self.cfg, _errors = config.load()       # the latest saved settings (including the last theme chosen)
         wid = self.next_window_id
         self.next_window_id += 1
         win = MainWindow(self, start, wid)

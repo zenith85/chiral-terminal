@@ -13,6 +13,7 @@
 "smart" Shift+arrows: when a program such as nano is running in the focused terminal, Shift+arrows go
 to that program; Ctrl+Shift+arrows always reach Chiral.
 """
+import copy
 import itertools
 import os
 import shlex
@@ -135,12 +136,33 @@ def is_binary(path):
     return False
 
 
+OWN_KEYS = ('theme', 'accent')        # settings each window keeps for itself
+
+
+def scope_css(css, cls):
+    """Limit every rule to widgets inside the window with style class `cls`."""
+    out = []
+    for rule in css.split('}'):
+        if '{' not in rule:
+            out.append(rule)
+            continue
+        selectors, body = rule.split('{', 1)
+        scoped = []
+        for sel in selectors.split(','):
+            sel = sel.strip()
+            scoped.append('.%s %s' % (cls, sel))
+            if sel.startswith('.'):
+                scoped.append('.%s%s' % (cls, sel))      # the window itself carries the class
+        out.append(', '.join(scoped) + ' {' + body)
+    return '}'.join(out)
+
+
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app, cwd, window_id=1):
         super().__init__(application=app, title='Chiral Terminal')
         self.window_id = window_id
         self.app = app
-        self.cfg = app.cfg
+        self.cfg = copy.deepcopy(app.cfg)      # this window's own copy: its theme stays its own
         self.cwd = cwd
         self.theme, self.accent = themes.get(self.cfg)
         self.runtime = shell.Runtime(window_id)
@@ -161,6 +183,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self._bg_frames = 0
 
         self.css = Gtk.CssProvider()
+        self.css_class = 'chiral-w%d' % window_id    # the CSS below only styles this window
+        self.get_style_context().add_class(self.css_class)
         Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), self.css,
                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
@@ -367,7 +391,33 @@ class MainWindow(Gtk.ApplicationWindow):
             self.aware.update_hidden()
         th, acc = self.theme, self.accent
         family = self.cfg['font'].get('family', 'Monospace')
+        # base look for this window's ordinary widgets. GTK's light/dark switch is shared by every
+        # window, so each window paints its own instead of flipping it
         css = '''
+        .background, popover, popover.background, menu, .menu {{ background-color: {pane}; color: {fg}; }}
+        popover, menu {{ border: 1px solid {line}; }}
+        headerbar, .titlebar {{ background-image: none; background-color: {hdr}; color: {fg}; border-color: {line};
+                 box-shadow: none; }}
+        headerbar .title, headerbar .subtitle {{ color: {fg}; }}
+        label {{ color: inherit; }}
+        button {{ background-image: none; background-color: {hdr}; color: {fg}; border-color: {line};
+                 box-shadow: none; text-shadow: none; -gtk-icon-shadow: none; }}
+        button:hover {{ background-color: alpha({acc}, 0.25); }}
+        button:checked, button:active {{ background-color: alpha({acc}, 0.45); }}
+        button.flat, button.image-button.flat {{ background-color: transparent; }}
+        entry, spinbutton, textview, textview text {{ background-image: none; background-color: {bg}; color: {fg};
+                 border-color: {line}; box-shadow: none; caret-color: {acc}; }}
+        entry selection, textview text selection, label selection {{ background-color: alpha({acc}, 0.45); }}
+        list, row, stacksidebar, viewport, scrolledwindow {{ background-color: {pane}; color: {fg}; }}
+        row:hover {{ background-color: alpha({acc}, 0.12); }}
+        switch {{ background-image: none; background-color: {hdr}; border-color: {line}; color: {fg}; }}
+        switch slider {{ background-image: none; background-color: {fg}; border-color: {line}; box-shadow: none; }}
+        scale trough, progressbar trough {{ background-image: none; background-color: {hdr}; border-color: {line}; }}
+        scale highlight, progressbar progress {{ background-image: none; background-color: {acc}; border-color: {acc}; }}
+        scale slider {{ background-image: none; background-color: {fg}; border-color: {line}; }}
+        scrollbar, scrollbar trough {{ background-color: transparent; border: none; }}
+        scrollbar slider {{ background-color: {dim}; }}
+        .dim-label {{ color: {dim}; opacity: 1; }}
         .chiral-panel {{ background-color: {pane}; color: {fg}; }}
         .chiral-panel treeview, .chiral-panel list, .chiral-panel row {{ background-color: {pane}; color: {fg}; font-family: "{family}"; }}
         .chiral-panel treeview:selected, .chiral-panel row:selected {{ background-color: {hdr}; color: {acc}; }}
@@ -421,10 +471,9 @@ class MainWindow(Gtk.ApplicationWindow):
         vte-terminal {{ padding: 2px 4px; }}
         '''.format(family=family, acc=acc, palette6=th['palette'][6], palette5=th['palette'][5],
                    palette1=th['palette'][1], **th)
-        self.css.load_from_data(css.encode())
+        self.css.load_from_data(scope_css(css, self.css_class).encode())
         if hasattr(self, 'aware'):
             self.aware.set_visible(bool(self.cfg.get('awareness', True)))
-        Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', bool(th.get('dark', True)))
         ms = themes.ANIMATION_MS.get(self.cfg.get('animations', 'normal'), 120)
         for r in self.revealers.values():
             r.set_transition_duration(ms)
@@ -449,7 +498,14 @@ class MainWindow(Gtk.ApplicationWindow):
         except OSError:
             pass
         cfg, errors = config.load()
-        self.app.cfg = self.cfg = cfg
+        self.app.cfg = cfg                  # new windows start from the saved settings
+        mine = copy.deepcopy(cfg)
+        for key in OWN_KEYS:                # theme and accent belong to each window
+            if key in self.cfg:
+                mine[key] = self.cfg[key]
+        if mine == self.cfg and not errors:
+            return                          # another window changed only its own theme
+        self.cfg = mine
         self.apply_config()
         self.toast('settings: ' + errors[0] if errors else 'settings applied')
 
