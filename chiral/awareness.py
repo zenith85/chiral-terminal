@@ -334,6 +334,9 @@ class AwarenessBar(Gtk.EventBox):
         if cwd and cwd != self.cwd:
             self.cwd = cwd
             self.refresh()
+            # the window's name says which project it is in: "Chiral [myproject]"
+            name = '~' if cwd == os.path.expanduser('~') else (os.path.basename(cwd.rstrip('/')) or '/')
+            self.win.set_title('Chiral [%s]' % name)
 
     def refresh(self):
         if not self.cwd:
