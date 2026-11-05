@@ -6,7 +6,7 @@ A plain terminal with four hidden edges. By default it's just your shell, full s
 |---|---|
 | **Shift+↑** | command bar: commands, `@file`, `#ask the AI agent`, `1`–`9` window, or any shell command |
 | **Shift+←** | closes a terminal column: the focused one, otherwise the rightmost (the main terminal is never closed) |
-| **Ctrl+Shift+F** (or mouse at the left edge) | file tree: enter open · `x` hex · `o` Nautilus · `t` shell here |
+| **Ctrl+Shift+F** | file tree (set "Open when the mouse touches the left edge" in Settings to open it by mouse too): enter open · `x` hex · `o` Nautilus · `t` shell here |
 | **Shift+↓** (or mouse at the bottom edge) | window bar: every sub-terminal, `1`–`9` jump, `t` tile, `h` hide all |
 | **Shift+→** | a new terminal column on the right, in the folder you are in; every press adds another. Columns share the width; the focused one has the bigger font. `exit` or **Ctrl+Shift+W** closes a column |
 
@@ -70,6 +70,8 @@ chiral -f "make watch"    run a command in a new sub-terminal
 chiral -x fw.bin          hex viewer
 chiral open [PATH]        show in Nautilus
 chiral settings           edit settings
+chiral restart            restart on the latest code: windows, columns, terminals and agents come
+                          back in their folders (Claude agents continue their conversation)
 ```
 
 ## Settings
@@ -80,7 +82,8 @@ AI agents and key behaviour. Every change applies at once and is saved to `~/.co
 (still editable by hand: "Open settings file").
 
 Themes: Chiral Dark, Nord, Catppuccin Mocha, Tokyo Night, Everforest, Rosé Pine, Kanagawa, Gruvbox Dark,
-Solarized Dark, High Contrast, and light: Chiral Light, Catppuccin Latte, Gruvbox Light, Solarized Light.
+Solarized Dark, High Contrast, CRT Phosphor (letters fade in like a picture tube, moving lines leave a short
+ghost, scanlines; tune it in `chiral/crt.py`), and light: Chiral Light, Catppuccin Latte, Gruvbox Light, Solarized Light.
 Each brings its own accent (accent "theme"), or pick one.
 
 ## Install

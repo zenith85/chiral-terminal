@@ -66,6 +66,13 @@ THEMES = {
         'palette': ['#000000', '#ff6b6b', '#b8ff6e', '#ffd24a', '#7cc4ff', '#ff9cf2', '#6effd1', '#ffffff',
                     '#6b6b6b', '#ff9a9a', '#d4ff9e', '#ffe38a', '#aad8ff', '#ffc2f7', '#a8ffe5', '#ffffff'],
     },
+    # green phosphor tube: letters fade in, moving lines leave a short ghost, scanlines (see crt.py)
+    'crt': {
+        'label': 'CRT Phosphor', 'dark': True, 'accent': '#5cff8a', 'crt': True,
+        'bg': '#030904', 'fg': '#6dfa8e', 'pane': '#050d07', 'hdr': '#0b1a0f', 'line': '#17351f', 'dim': '#3d7a4d',
+        'palette': ['#0c1f12', '#ff6a4d', '#5cff8a', '#d8ff6a', '#4fd6a0', '#9ef2b4', '#3fffc8', '#9cffb3',
+                    '#2c5c3a', '#ff8f75', '#8dffad', '#e8ff9a', '#7ff0c2', '#c4ffd5', '#8affe0', '#e6ffec'],
+    },
     'chiral-light': {
         'label': 'Chiral Light', 'dark': False, 'accent': '#a4610c',
         'bg': '#faf8f3', 'fg': '#23211d', 'pane': '#f1ede4', 'hdr': '#e2dccd', 'line': '#cfc8b8', 'dim': '#8a8475',

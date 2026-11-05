@@ -3,7 +3,7 @@
   Shift+↑  command bar        Shift+←  close a terminal column (the focused one, else the last)
   Shift+↓  window bar         Shift+→  new terminal column on the right (focused one: bigger font)
   AI agents: Shift+↑ → "AI agent" opens Claude in a floating window that watches your terminals
-  Ctrl+O or Ctrl+Shift+F file tree (or touch the left edge with the mouse); moving through it shows a live
+  Ctrl+O or Ctrl+Shift+F file tree (touching the left edge opens it too if tree.hover is on); moving through it shows a live
         preview window: folders as a shell there, binaries in hex, text read-only. Space keeps the preview
   Ctrl+Shift+T new sub-terminal · Ctrl+Shift+W close it · Ctrl+Shift+E Claude explains last failure
   Ctrl+Shift+C / V copy / paste · Ctrl + / - / 0 font of the focused terminal
@@ -23,7 +23,7 @@ import time
 
 from gi.repository import GLib, Gdk, Gio, Gtk, Vte
 
-from . import config, fonts, shell, themes
+from . import config, crt, fonts, shell, themes
 from .bars import CommandBar, Toast, WindowBar
 from .awareness import AwarenessBar
 from .agents import AgentManager
@@ -248,6 +248,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.apply_config()
         self.spawn(self.main_term, role='main', win=0, cwd=cwd)
         self.last_term = self.main_term
+        self.main_term.grab_focus()               # a new window is ready to type in
         self.aware.follow(cwd)
         GLib.timeout_add(400, self._poll_events)
         GLib.timeout_add(BG_FRAME_MS, self._bg_tick)
@@ -292,9 +293,22 @@ class MainWindow(Gtk.ApplicationWindow):
         t.connect('scroll-event', self._on_scroll)
         t.chiral_field = StrandField(next(_seeds))
         t.set_clear_background(False)      # we paint the background (and the strands) ourselves
+        t.chiral_crt = crt.Phosphor(t, self._crt_animates)
+        t.connect('draw', self._draw_crt)  # first: the CRT theme shows the terminal through its phosphor
         t.connect('draw', self._draw_background)
         self._style_terminal(t)
         return t
+
+    def _crt_on(self):
+        return bool(getattr(self, 'theme', {}).get('crt'))
+
+    def _crt_animates(self):
+        return self._crt_on()               # the fading is the theme itself, so "animations: off" leaves it on
+
+    def _draw_crt(self, t, cr):
+        if not self._crt_on() or t.chiral_crt.inner:
+            return False                    # the normal drawing (or the CRT's own offscreen pass)
+        return t.chiral_crt.draw(cr)
 
     def _draw_background(self, t, cr):
         """Runs before the terminal draws its text: background colour, then the strands."""
@@ -958,7 +972,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self._focus_back()
 
     def _hover(self, name):
-        if name == 'tree' and not self.cfg['tree'].get('hover', True):
+        if name == 'tree' and not self.cfg['tree'].get('hover', False):
             return False
         if not self.panel_open(name):
             self.show_panel(name, by_hover=True)
@@ -982,6 +996,7 @@ class MainWindow(Gtk.ApplicationWindow):
             sub.get_style_context().add_class('agent')
             sub.set_border(3)               # thick enough that the square content fits inside the rounded corners
             sub.set_rounded(9)
+            self._accept_drops(sub)
         sub.term.chiral_keys_first = agent  # Chiral's keys still work inside an agent
         self.next_sid += 1
         self.subs.append(sub)
@@ -1015,7 +1030,100 @@ class MainWindow(Gtk.ApplicationWindow):
         return sub
 
     def new_shell(self, cwd=None):
-        return self.new_sub('bash', cwd=cwd)
+        sub = self.new_sub('bash', cwd=cwd)
+        sub.restore_as = 'shell'            # `restart chiral` brings it back
+        return sub
+
+    # ---------- restart chiral (new code, same windows) ----------
+    def _foreground_name(self, t):
+        try:
+            with open('/proc/%d/comm' % os.tcgetpgrp(t.get_pty().get_fd())) as f:
+                return f.read().strip()
+        except (OSError, AttributeError):
+            return t.chiral_sub.title if t.chiral_sub else 'a program'
+
+    def busy_programs(self):
+        """Programs that a restart would close (nano, vim, a build ...). Agents come back, so they don't count."""
+        return [self._foreground_name(t) for t in self.all_terminals()
+                if not (t.chiral_sub is not None and t.chiral_sub.agent) and self.term_busy(t)]
+
+    def restart_state(self):
+        """What `restart chiral` needs to bring this window back."""
+        subs = []
+        for s in self.subs:
+            kind = getattr(s, 'agent_kind', None) if s.agent else getattr(s, 'restore_as', None)
+            if kind and not s.remote:
+                subs.append({'kind': kind, 'cwd': self.cwd_of(s.term), 'geom': [s.x, s.y, s.w, s.h],
+                             'visible': s.get_visible()})
+        return {
+            'cwd': self.cwd_of(self.main_term),
+            'own': {k: self.cfg[k] for k in OWN_KEYS if k in self.cfg},
+            'pos': list(self.get_position()), 'size': list(self.get_size()), 'maximized': self.is_maximized(),
+            'columns': [{'folder': c.folder if c.team else self.cwd_of(c.term), 'team': c.team}
+                        for c in self.columns],
+            'subs': subs,
+        }
+
+    def restore_state(self, st):
+        own = st.get('own') or {}
+        if own:
+            self.cfg.update(own)
+            self.apply_config()
+        if st.get('size'):
+            self.resize(*st['size'])
+        if st.get('pos'):
+            self.move(*st['pos'])
+        if st.get('maximized'):
+            self.maximize()
+
+        def fill():                         # once the window has its size, so windows land where they were
+            for c in st.get('columns', []):
+                self.add_column(c.get('folder'), team=c.get('team', False))
+            resumed = set()
+            for s in st.get('subs', []):
+                if s['kind'] == 'shell':
+                    sub = self.new_shell(cwd=s.get('cwd'))
+                else:
+                    sub = self.agents.spawn(s.get('cwd'), s['kind'], resume=s.get('cwd') not in resumed)
+                    resumed.add(s.get('cwd'))
+                if s.get('geom'):
+                    sub.place(*s['geom'])
+                if not s.get('visible', True):
+                    self.hide_sub(sub)
+            self.main_term.grab_focus()
+            return False
+        GLib.timeout_add(300, fill)
+
+    def _accept_drops(self, sub):
+        """Folders and files dropped on an agent window (from Nautilus, the desktop or Chiral's tree) are
+        typed into its prompt as paths, so you can tell the agent what to do with them."""
+        sub.term.drag_dest_set(Gtk.DestDefaults.ALL,
+                               [Gtk.TargetEntry.new('text/uri-list', 0, 0),
+                                Gtk.TargetEntry.new('text/plain;charset=utf-8', 0, 1),
+                                Gtk.TargetEntry.new('text/plain', 0, 1)],
+                               Gdk.DragAction.COPY | Gdk.DragAction.LINK)
+        sub.term.connect('drag-data-received', self._on_agent_drop, sub)
+
+    def _on_agent_drop(self, term, _ctx, _x, _y, data, _info, _time, sub):
+        uris = data.get_uris() or [u for u in (data.get_text() or '').splitlines() if u.strip()]
+        paths = []
+        for uri in uris:
+            uri = uri.strip()
+            if uri.startswith('file://'):
+                try:
+                    uri = GLib.filename_from_uri(uri)[0]
+                except GLib.Error:
+                    continue
+            if uri.startswith('/'):
+                paths.append(uri)
+        if not paths:
+            return
+        text = ' '.join(shlex.quote(p) for p in paths) + ' '   # no Enter: you type what you want done
+        try:
+            term.feed_child(text.encode())
+        except TypeError:
+            term.feed_child_binary(text.encode())
+        self.focus_sub(sub)
 
     def focus_sub(self, sub, grab=True):
         if sub not in self.subs:
@@ -1564,6 +1672,7 @@ class MainWindow(Gtk.ApplicationWindow):
             ('settings: AI agents', lambda: self.open_settings('agents')),
             ('settings: keys', lambda: self.open_settings('keys')),
             ('settings file (text)', self.open_settings_file),
+            ('restart chiral (new version, keeps your windows and folders)', lambda: self.app.request_restart(self)),
             ('tile windows', self.tile),
             ('hide all windows', self.hide_all),
             ('show all windows', self.show_all_subs),

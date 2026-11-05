@@ -25,7 +25,7 @@ DEFAULTS = {
         'main_auto': True,
         'unfocused_drop': 3,
     },
-    'tree': {'hover': True, 'show_hidden': False, 'preview': True},
+    'tree': {'hover': False, 'show_hidden': False, 'preview': True},
     'claude': {'command': 'claude', 'codex_command': 'codex', 'default_agent': 'claude', 'watch': 'auto',
                'local_model': ''},
     'keys': {'shift_arrows': 'smart', 'ctrl_arrows': 'smart'},
@@ -55,7 +55,7 @@ main_auto = true            # main terminal shrinks its font when the side panel
 unfocused_drop = 3          # with Shift+→ columns: unfocused ones are this many points smaller
 
 [tree]
-hover = true                # show the tree when the mouse touches the left edge
+hover = false               # show the tree when the mouse touches the left edge (off: only the shortcut opens it)
 show_hidden = false
 preview = true              # moving through the tree shows the selected item in a floating window
 

@@ -4,9 +4,11 @@ Every `chiral ...` call is forwarded to the running Chiral over D-Bus. Calls mad
 Chiral window (nano pop-outs, $EDITOR, chiral -f ...) go back to that same window; `chiral --new-window`
 (the Ctrl+Alt+F shortcut) opens another window; other calls go to the window you used last.
 """
+import json
 import os
+import time
 
-from gi.repository import Gio, Gtk
+from gi.repository import Gio, GLib, Gtk
 
 from . import config
 
@@ -16,6 +18,8 @@ USAGE = '''usage: chiral [PATH[:LINE]]...        open a folder or file (files op
        chiral -x FILE                  open FILE in the hex viewer
        chiral open [PATH]              show PATH in Nautilus
        chiral settings                 open the settings window
+       chiral restart                  restart on the latest code; every window, column, terminal and
+                                      agent comes back in its folder (Claude agents continue their chat)
        chiral --popout [--wait] -- PROGRAM ARGS...
                                       run PROGRAM in a sub-terminal (used by the shell integration;
                                       --wait returns when it closes, so it works as $EDITOR)
@@ -33,10 +37,16 @@ class CliError(Exception):
 
 def parse(args):
     opts = {'paths': [], 'float': None, 'hex': None, 'open': None, 'settings': False,
-            'popout': None, 'wait': False, 'new_window': False}
+            'popout': None, 'wait': False, 'new_window': False, 'restart': False, 'restore': None}
     i = 0
     if args and args[0] == 'open':
         opts['open'] = args[1] if len(args) > 1 else '.'
+        return opts
+    if args and args[0] == 'restart':
+        opts['restart'] = True
+        return opts
+    if args[:1] == ['--restore'] and len(args) > 1:     # used by `chiral restart` itself
+        opts['restore'] = args[1]
         return opts
     if args and args[0] == 'settings':
         opts['settings'] = True
@@ -75,7 +85,7 @@ def parse(args):
 
 class ChiralApp(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id='org.chiral.Chiral',
+        super().__init__(application_id=os.environ.get('CHIRAL_APP_ID') or 'org.chiral.Chiral',  # another id: a separate test instance
                          flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE
                          | Gio.ApplicationFlags.SEND_ENVIRONMENT)   # so calls from a Chiral shell find their window
         self.cfg = None
@@ -83,6 +93,8 @@ class ChiralApp(Gtk.Application):
         self.next_window_id = 1
         self.last_window = None
         self.waiting = {}
+        self.restart_file = None     # set by request_restart: __main__ starts the new code with it
+        self._restart_asked = 0.0
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -134,6 +146,13 @@ class ChiralApp(Gtk.Application):
         def resolve(p):
             return os.path.normpath(os.path.join(cwd, os.path.expanduser(p)))
 
+        if opts['restore']:
+            self.restore(opts['restore'])
+            return 0
+        if opts['restart'] and self.windows:
+            self.request_restart(caller or self.window)
+            return 0
+
         first = opts['new_window'] or (caller is None and not self.windows)
         if first:
             start = cwd
@@ -182,6 +201,47 @@ class ChiralApp(Gtk.Application):
         if not opts['popout']:
             win.present()
         return 0
+
+    # --- restart chiral: the latest code, the same windows ---
+    def request_restart(self, win):
+        busy = sorted({n for w in self.windows.values() for n in w.busy_programs()})
+        now = time.monotonic()
+        if busy and now - self._restart_asked > 15:
+            self._restart_asked = now
+            win.toast('restart closes %s (unsaved work is lost). Restart again within 15 s to go ahead'
+                      % ', '.join(busy[:4]))
+            return
+        wins = sorted(self.windows.values(), key=lambda w: w is self.window)   # the one you used last ends on top
+        state = [w.restart_state() for w in wins]
+        path = os.path.join(GLib.get_user_runtime_dir(), 'chiral-restore-%d.json' % os.getpid())
+        try:
+            with open(path, 'w') as f:
+                json.dump(state, f)
+        except OSError as e:
+            win.toast('could not restart: %s' % e)
+            return
+        self.restart_file = path
+        for w in wins:
+            w.destroy()
+        self.quit()
+
+    def restore(self, path):
+        try:
+            with open(path) as f:
+                states = json.load(f)
+        except (OSError, ValueError):
+            states = []
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        win = None
+        for st in states or [{}]:
+            cwd = st.get('cwd')
+            win = self._new_window(cwd if cwd and os.path.isdir(cwd) else os.path.expanduser('~'))
+            win.restore_state(st)
+        win.present()
+        win.toast('Chiral restarted')
 
     def _on_window_destroy(self, _win, wid):
         self.windows.pop(wid, None)

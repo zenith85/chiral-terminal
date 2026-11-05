@@ -59,6 +59,11 @@ class FileTree(Gtk.EventBox):
         self.view.connect('row-activated', self._on_activate)
         self.view.connect('key-press-event', self._on_key)
         self.view.connect('cursor-changed', lambda *_: self._schedule_preview())
+        # drag rows out: drop them on an AI agent window (or any app that takes files)
+        self.view.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
+                                           [Gtk.TargetEntry.new('text/uri-list', 0, 0)],
+                                           Gdk.DragAction.COPY | Gdk.DragAction.LINK)
+        self.view.connect('drag-data-get', self._on_drag_get)
         self._preview_source = 0
         self._quiet = False           # cursor moves made by Chiral itself: no preview
         scroll = Gtk.ScrolledWindow()
@@ -234,6 +239,9 @@ class FileTree(Gtk.EventBox):
             full, _ = self._selected()
             out = [full] if full else []
         return out
+
+    def _on_drag_get(self, _view, _ctx, data, _info, _time):
+        data.set_uris([GLib.filename_to_uri(p, None) for p in self._selected_paths()])
 
     # --- copy / cut / paste / rename ---
     def _copy(self, mode):

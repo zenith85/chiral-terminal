@@ -1,3 +1,4 @@
+import os
 import sys
 
 import gi
@@ -20,7 +21,11 @@ def main():
     GLib.set_application_name('Chiral Terminal')
     from gi.repository import Gtk
     Gtk.Window.set_default_icon_name('org.chiral.Chiral')
-    return ChiralApp().run(sys.argv)
+    app = ChiralApp()
+    status = app.run(sys.argv)
+    if app.restart_file:                # `restart chiral`: become the new code and reopen the saved windows
+        os.execv(sys.executable, [sys.executable, '-m', 'chiral', '--restore', app.restart_file])
+    return status
 
 
 if __name__ == '__main__':

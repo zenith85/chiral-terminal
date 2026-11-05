@@ -36,7 +36,8 @@ class AgentManager:
         self.last_failure = None
 
     # --- opening ---
-    def spawn(self, folder=None, kind=None):
+    def spawn(self, folder=None, kind=None, resume=False):
+        """resume: Claude continues its last conversation in this folder (used by `restart chiral`)."""
         win = self.win
         folder = os.path.abspath(folder or win.cwd)
         acfg = win.cfg['claude']
@@ -52,6 +53,9 @@ class AgentManager:
             kind = 'claude'
             cmd = acfg.get('command', 'claude')
             launch = 'exec %s --append-system-prompt "$CHIRAL_AGENT_PROMPT"' % cmd
+            if resume:                  # no conversation to continue: start a new one
+                launch = ('%s --continue --append-system-prompt "$CHIRAL_AGENT_PROMPT" || %s; exit'
+                          % (cmd, launch))
         tool = shlex.split(cmd)[0] if cmd.strip() else kind
         # an interactive bash loads ~/.bashrc (nvm, PATH), then becomes the agent
         script = ('if command -v %s >/dev/null 2>&1; then %s; fi; '

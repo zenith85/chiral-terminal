@@ -390,7 +390,7 @@ class SettingsWindow(Gtk.Window):
         self._row(box, 'Terminal awareness bar', self._switch('awareness', True),
                   'git branch and changes, H for binary files, py / node / docker / make.')
         self._heading(box, 'File tree (Ctrl+O)')
-        self._row(box, 'Open when the mouse touches the left edge', self._switch('tree.hover', True))
+        self._row(box, 'Open when the mouse touches the left edge', self._switch('tree.hover', False))
         self._row(box, 'Live preview while moving through it', self._switch('tree.preview', True),
                   'Folders as a shell there, binaries in hex, text read-only.')
         self._row(box, 'Show hidden files', self._switch('tree.show_hidden', False))
