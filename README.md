@@ -82,8 +82,8 @@ AI agents and key behaviour. Every change applies at once and is saved to `~/.co
 (still editable by hand: "Open settings file").
 
 Themes: Chiral Dark, Nord, Catppuccin Mocha, Tokyo Night, Everforest, Rosé Pine, Kanagawa, Gruvbox Dark,
-Solarized Dark, High Contrast, CRT Phosphor (letters fade in like a picture tube, moving lines leave a short
-ghost, scanlines; tune it in `chiral/crt.py`), and light: Chiral Light, Catppuccin Latte, Gruvbox Light, Solarized Light.
+Solarized Dark, High Contrast, the CRT themes Green, Amber, White, Cyan and Plasma (letters fade in like a picture
+tube, moving lines leave a short ghost, scanlines; tune it in `chiral/crt.py`), and light: Chiral Light, Catppuccin Latte, Gruvbox Light, Solarized Light.
 Each brings its own accent (accent "theme"), or pick one.
 
 ## Install

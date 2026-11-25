@@ -66,12 +66,37 @@ THEMES = {
         'palette': ['#000000', '#ff6b6b', '#b8ff6e', '#ffd24a', '#7cc4ff', '#ff9cf2', '#6effd1', '#ffffff',
                     '#6b6b6b', '#ff9a9a', '#d4ff9e', '#ffe38a', '#aad8ff', '#ffc2f7', '#a8ffe5', '#ffffff'],
     },
-    # green phosphor tube: letters fade in, moving lines leave a short ghost, scanlines (see crt.py)
-    'crt': {
-        'label': 'CRT Phosphor', 'dark': True, 'accent': '#5cff8a', 'crt': True,
+    # picture-tube themes: letters fade in, moving lines leave a short ghost, scanlines (see crt.py).
+    # Each is one phosphor colour; the ANSI colours are shades of it, with red kept apart for errors.
+    'crt': {                                            # P1 green (the name stays 'crt' for saved settings)
+        'label': 'CRT Green', 'dark': True, 'accent': '#5cff8a', 'crt': True,
         'bg': '#030904', 'fg': '#6dfa8e', 'pane': '#050d07', 'hdr': '#0b1a0f', 'line': '#17351f', 'dim': '#3d7a4d',
         'palette': ['#0c1f12', '#ff6a4d', '#5cff8a', '#d8ff6a', '#4fd6a0', '#9ef2b4', '#3fffc8', '#9cffb3',
                     '#2c5c3a', '#ff8f75', '#8dffad', '#e8ff9a', '#7ff0c2', '#c4ffd5', '#8affe0', '#e6ffec'],
+    },
+    'crt-amber': {                                      # P3 amber
+        'label': 'CRT Amber', 'dark': True, 'accent': '#ffb000', 'crt': True,
+        'bg': '#0b0700', 'fg': '#ffb43a', 'pane': '#0f0a02', 'hdr': '#1f1505', 'line': '#3d2a0c', 'dim': '#8a6224',
+        'palette': ['#1f1505', '#ff5a36', '#e6c34a', '#ffcc33', '#e08a2e', '#ff9e5e', '#ffd98a', '#ffc46b',
+                    '#5a3f12', '#ff8060', '#f2d56e', '#ffe066', '#f0a552', '#ffbb88', '#ffe8b0', '#fff0d6'],
+    },
+    'crt-white': {                                      # P4 white, slightly blue like a monochrome monitor
+        'label': 'CRT White', 'dark': True, 'accent': '#d9e6ff', 'crt': True,
+        'bg': '#06070a', 'fg': '#d7dde8', 'pane': '#090a0e', 'hdr': '#14161c', 'line': '#2a2e38', 'dim': '#6c7282',
+        'palette': ['#14161c', '#ff7a6e', '#c8f0c8', '#f2e6b8', '#a9c1ff', '#d9c4f2', '#b8e8ef', '#c9ced8',
+                    '#4a4f5c', '#ff9d94', '#e0ffe0', '#fff4cc', '#c8d7ff', '#ead9ff', '#d4f6fa', '#ffffff'],
+    },
+    'crt-cyan': {                                       # P7 radar blue-white
+        'label': 'CRT Cyan', 'dark': True, 'accent': '#44e0ff', 'crt': True,
+        'bg': '#01070b', 'fg': '#7fe6ff', 'pane': '#030b10', 'hdr': '#08171f', 'line': '#12313f', 'dim': '#3a7488',
+        'palette': ['#08171f', '#ff6f7d', '#5cf2d0', '#c8f07a', '#4fa8ff', '#a89bff', '#44e0ff', '#a8eeff',
+                    '#24505f', '#ff96a0', '#8af7de', '#dcf7a2', '#80c2ff', '#c4bcff', '#88ecff', '#e6faff'],
+    },
+    'crt-plasma': {                                     # gas-plasma orange-red, like early portable computers
+        'label': 'CRT Plasma', 'dark': True, 'accent': '#ff6a1a', 'crt': True,
+        'bg': '#0c0301', 'fg': '#ff7a2e', 'pane': '#100502', 'hdr': '#220b04', 'line': '#44170a', 'dim': '#8f3f1c',
+        'palette': ['#220b04', '#ff3b3b', '#ffb03a', '#ffd04a', '#ff8a52', '#ff6f8a', '#ffb98a', '#ff9a5c',
+                    '#5e200c', '#ff6b6b', '#ffc870', '#ffe080', '#ffaa7f', '#ff9aae', '#ffd2b0', '#ffe9d9'],
     },
     'chiral-light': {
         'label': 'Chiral Light', 'dark': False, 'accent': '#a4610c',
